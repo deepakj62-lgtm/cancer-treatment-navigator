@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cancer Treatment Navigator — 5-Layer Personalized Pipeline</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #1a1d2e; --card: #222538; --border: #2e3250;
+    --green: #00c896; --yellow: #f59e0b; --red: #ef4444; --blue: #60a5fa;
+    --purple: #a78bfa; --text: #e2e8f0; --muted: #94a3b8; --accent: #818cf8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.6; }
+  header { background: linear-gradient(135deg, #1e1b4b, #312e81); padding: 20px 24px; border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 22px; font-weight: 700; color: #fff; }
+  header p { color: #a5b4fc; font-size: 13px; margin-top: 4px; }
+  .layout { display: grid; grid-template-columns: 420px 1fr; gap: 0; min-height: calc(100vh - 80px); }
+  .input-panel { background: var(--panel); border-right: 1px solid var(--border); padding: 20px; overflow-y: auto; max-height: calc(100vh - 80px); }
+  .output-panel { padding: 20px; overflow-y: auto; max-height: calc(100vh - 80px); }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .field { margin-bottom: 12px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+  select, input[type=number], input[type=text] {
+    width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); padding: 8px 10px; font-size: 13px; outline: none; transition: border-color 0.2s;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+  .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .cb-item { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; padding: 3px 0; }
+  .cb-item input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; }
+  .generate-btn {
+    width: 100%; padding: 14px; background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border: none; border-radius: 8px; color: #fff; font-size: 15px; font-weight: 700;
+    cursor: pointer; margin-top: 20px; letter-spacing: 0.5px; transition: opacity 0.2s;
+  }
+  .generate-btn:hover { opacity: 0.9; }
+  .placeholder { color: var(--muted); text-align: center; padding: 60px 20px; font-size: 14px; }
+  .placeholder-icon { font-size: 48px; margin-bottom: 12px; }
+  .layer-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+  .layer-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .layer-badge { background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+  .layer-title { font-size: 15px; font-weight: 700; }
+  .item { padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 13px; border-left: 3px solid; }
+  .item.green { background: rgba(0,200,150,0.08); border-color: var(--green); }
+  .item.yellow { background: rgba(245,158,11,0.08); border-color: var(--yellow); }
+  .item.red { background: rgba(239,68,68,0.08); border-color: var(--red); }
+  .item.blue { background: rgba(96,165,250,0.08); border-color: var(--blue); }
+  .item.purple { background: rgba(167,139,250,0.08); border-color: var(--purple); }
+  .item-title { font-weight: 600; margin-bottom: 2px; }
+  .item-detail { color: var(--muted); font-size: 12px; }
+  .channel-bar { display: flex; gap: 4px; flex-wrap: wrap; margin: 10px 0; }
+  .channel-chip { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .channel-chip.active { background: rgba(0,200,150,0.2); color: var(--green); border: 1px solid var(--green); }
+  .channel-chip.inactive { background: rgba(148,163,184,0.1); color: var(--muted); border: 1px solid var(--border); }
+  .score-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+  .score-box { background: var(--panel); border-radius: 8px; padding: 12px; text-align: center; border: 1px solid var(--border); }
+  .score-val { font-size: 24px; font-weight: 800; color: var(--green); }
+  .score-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .alert-box { background: rgba(239,68,68,0.1); border: 1px solid var(--red); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+  .alert-box h4 { color: var(--red); font-size: 13px; margin-bottom: 4px; }
+  .alert-box p { color: var(--text); font-size: 12px; }
+  .india-badge { background: rgba(255,153,51,0.15); color: #ff9933; border: 1px solid rgba(255,153,51,0.3); border-radius: 4px; font-size: 10px; font-weight: 700; padding: 2px 6px; margin-left: 6px; }
+  .progress-bar { height: 4px; background: var(--border); border-radius: 4px; margin: 8px 0; }
+  .progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width 0.5s; }
+  .copy-btn { background: var(--card); border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; float: right; }
+  .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  th { background: rgba(129,140,248,0.1); color: var(--accent); text-align: left; padding: 6px 8px; font-size: 11px; }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .tag { display: inline-block; padding: 2px 7px; border-radius: 12px; font-size: 10px; font-weight: 600; margin: 1px; }
+  .tag.g { background: rgba(0,200,150,0.15); color: var(--green); }
+  .tag.y { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .tag.r { background: rgba(239,68,68,0.15); color: var(--red); }
+  @media print { .input-panel { display: none; } .layout { display: block; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧬 Cancer Treatment Navigator</h1>
+  <p>5-Layer Personalized Treatment Pipeline · Input patient profile → Get precision treatment plan</p>
+</header>
+<div class="layout">
+  <!-- INPUT PANEL -->
+  <div class="input-panel">
+    <div class="section-title">🔬 Cancer Profile</div>
+    <div class="field">
+      <label>Cancer Type</label>
+      <select id="cancerType">
+        <option value="">— Select —</option>
+        <option value="NSCLC">Non-Small Cell Lung Cancer (NSCLC)</option>
+        <option value="SCLC">Small Cell Lung Cancer (SCLC)</option>
+        <option value="Melanoma">Melanoma</option>
+        <option value="CRC">Colorectal Cancer (CRC)</option>
+        <option value="Breast">Breast Cancer</option>
+        <option value="Pancreatic">Pancreatic Cancer (PDAC)</option>
+        <option value="Gastric">Gastric / GEJ Cancer</option>
+        <option value="Bladder">Urothelial / Bladder Cancer</option>
+        <option value="Cervical">Cervical Cancer</option>
+        <option value="Ovarian">Ovarian Cancer</option>
+        <option value="HCC">Hepatocellular Carcinoma (HCC)</option>
+        <option value="Prostate">Prostate Cancer (CRPC)</option>
+        <option value="GBM">Glioblastoma (GBM)</option>
+        <option value="Mesothelioma">Mesothelioma</option>
+        <option value="HNSCC">Head &amp; Neck SCC (HNSCC)</option>
+        <option value="MCC">Merkel Cell Carcinoma</option>
+        <option value="AML">AML (Acute Myeloid Leukemia)</option>
+        <option value="ALL">ALL (Acute Lymphoblastic Leukemia)</option>
+        <option value="CLL">CLL (Chronic Lymphocytic Leukemia)</option>
+        <option value="DLBCL">DLBCL (Diffuse Large B-Cell Lymphoma)</option>
+        <option value="Hodgkin">Hodgkin Lymphoma</option>
+        <option value="Myeloma">Multiple Myeloma</option>
+        <option value="CML">CML (Chronic Myeloid Leukemia)</option>
+        <option value="NPC">Nasopharyngeal Carcinoma (NPC)</option>
+        <option value="SynovialSarcoma">Synovial Sarcoma</option>
+        <option value="Neuroblastoma">Neuroblastoma</option>
+        <option value="RCC">Renal Cell Carcinoma (RCC)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Stage</label>
+      <select id="stage">
+        <option value="">— Select —</option>
+        <option value="I">Stage I</option>
+        <option value="II">Stage II</option>
+        <option value="III">Stage III</option>
+        <option value="IV">Stage IV / Metastatic</option>
+        <option value="RR">Relapsed / Refractory</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>TME Type (Tumor Microenvironment)</label>
+      <select id="tme">
+        <option value="Unknown">Unknown / Not tested</option>
+        <option value="Hot">Hot (TIL-rich, inflamed)</option>
+        <option value="Warm">Warm (moderate TILs)</option>
+        <option value="Excluded">Immune-Excluded (stroma barrier)</option>
+        <option value="Cold">Cold (no TILs, poor infiltration)</option>
+        <option value="Desert">Desert (no immune cells)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>TMB Score (mutations/Mb)</label>
+      <input type="number" id="tmb" placeholder="e.g. 15" min="0" max="300">
+    </div>
+    <div class="field">
+      <label>MSI Status</label>
+      <select id="msi">
+        <option value="Unknown">Unknown</option>
+        <option value="MSS">MSS (stable)</option>
+        <option value="MSI-L">MSI-L (low)</option>
+        <option value="MSI-H">MSI-H (high instability)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>PD-L1 TPS (%)</label>
+      <input type="number" id="pdl1" placeholder="e.g. 50" min="0" max="100">
+    </div>
+    <div class="field">
+      <label>HER2 Status</label>
+      <select id="her2">
+        <option value="0">0 (negative)</option>
+        <option value="1+">1+ (low)</option>
+        <option value="2+">2+ (equivocal)</option>
+        <option value="3+">3+ (positive / amplified)</option>
+      </select>
+    </div>
+
+    <div class="section-title">🧪 Key Mutations (check all that apply)</div>
+    <div class="checkbox-grid">
+      <label class="cb-item"><input type="checkbox" name="mut" value="EGFR"> EGFR</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="ALK"> ALK fusion</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="ROS1"> ROS1 fusion</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="RET"> RET fusion</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="KRAS_G12C"> KRAS G12C</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="BRAF_V600E"> BRAF V600E</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="NTRK"> NTRK fusion</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="MET_ex14"> MET exon 14</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="FLT3"> FLT3-ITD/TKD</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="IDH1"> IDH1</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="IDH2"> IDH2</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="NPM1"> NPM1</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="BCR_ABL"> BCR-ABL</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="TP53"> TP53</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="BRCA1"> BRCA1</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="BRCA2"> BRCA2</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="PIK3CA"> PIK3CA</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="PTEN_loss"> PTEN loss</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="KMT2A"> KMT2A rearr.</label>
+      <label class="cb-item"><input type="checkbox" name="mut" value="POLE"> POLE/POLD1</label>
+    </div>
+
+    <div class="section-title">🦠 Biomarkers</div>
+    <div class="field">
+      <label>Viral Association</label>
+      <select id="viral">
+        <option value="None">None</option>
+        <option value="HPV">HPV+ (cervical/HNSCC)</option>
+        <option value="EBV">EBV+ (NPC/gastric/lymphoma)</option>
+        <option value="HBV">HBV+ (HCC)</option>
+        <option value="HCV">HCV+ (HCC)</option>
+        <option value="MCPyV">MCPyV+ (Merkel cell)</option>
+        <option value="KSHV">KSHV/HHV-8 (Kaposi)</option>
+      </select>
+    </div>
+    <div class="checkbox-grid">
+      <label class="cb-item"><input type="checkbox" id="cd19"> CD19+</label>
+      <label class="cb-item"><input type="checkbox" id="cd20"> CD20+</label>
+      <label class="cb-item"><input type="checkbox" id="cd30"> CD30+ (HL)</label>
+      <label class="cb-item"><input type="checkbox" id="bcma"> BCMA+</label>
+      <label class="cb-item"><input type="checkbox" id="psma"> PSMA+ (prostate)</label>
+      <label class="cb-item"><input type="checkbox" id="gd2"> GD2+ (neuro/SCLC)</label>
+      <label class="cb-item"><input type="checkbox" id="del17p"> del(17p)/TP53</label>
+      <label class="cb-item"><input type="checkbox" id="ighvUnmut"> IGHV unmutated</label>
+    </div>
+
+    <div class="section-title">👤 Individual Profile</div>
+    <div class="field">
+      <label>Age</label>
+      <input type="number" id="age" placeholder="e.g. 55" min="0" max="100">
+    </div>
+    <div class="field">
+      <label>ECOG Performance Status</label>
+      <select id="ecog">
+        <option value="0">0 — Fully active</option>
+        <option value="1">1 — Restricted but ambulatory</option>
+        <option value="2">2 — Ambulatory, self-care only</option>
+        <option value="3">3 — Limited self-care</option>
+        <option value="4">4 — Completely disabled</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>eGFR (mL/min/1.73m²)</label>
+      <input type="number" id="egfr" placeholder="e.g. 75" min="0" max="200">
+    </div>
+    <div class="field">
+      <label>Ejection Fraction (%)</label>
+      <input type="number" id="ef" placeholder="e.g. 60" min="0" max="80">
+    </div>
+    <div class="field">
+      <label>Country / Access Region</label>
+      <select id="country">
+        <option value="India">India</option>
+        <option value="USA">USA / Canada</option>
+        <option value="UK">UK / Europe</option>
+        <option value="UAE">UAE / Middle East</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Budget Tier</label>
+      <select id="budget">
+        <option value="Low">Low (&lt;$10k / ₹8L)</option>
+        <option value="Medium">Medium ($10–50k / ₹8–40L)</option>
+        <option value="High">High ($50–200k / ₹40L–1.6Cr)</option>
+        <option value="Unlimited">Unlimited / Insurance-covered</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Prior Treatments</label>
+      <div class="checkbox-grid">
+        <label class="cb-item"><input type="checkbox" name="prior" value="Chemo"> Chemotherapy</label>
+        <label class="cb-item"><input type="checkbox" name="prior" value="ICI"> Immunotherapy</label>
+        <label class="cb-item"><input type="checkbox" name="prior" value="Targeted"> Targeted therapy</label>
+        <label class="cb-item"><input type="checkbox" name="prior" value="Radiation"> Radiation</label>
+        <label class="cb-item"><input type="checkbox" name="prior" value="Surgery"> Surgery</label>
+        <label class="cb-item"><input type="checkbox" name="prior" value="CART"> CAR-T therapy</label>
+        <label class="cb-item"><input type="checkbox" name="prior" value="SCT"> Stem cell transplant</label>
+      </div>
+    </div>
+    <div class="checkbox-grid">
+      <label class="cb-item"><input type="checkbox" id="transplantEligible"> Transplant eligible</label>
+      <label class="cb-item"><input type="checkbox" id="cartEligible" checked> CAR-T eligible</label>
+      <label class="cb-item"><input type="checkbox" id="hlaA0201"> HLA-A*02:01+</label>
+      <label class="cb-item"><input type="checkbox" id="germlineBRCA"> Germline BRCA</label>
+    </div>
+
+    <button class="generate-btn" onclick="generatePipeline()">⚡ Generate Treatment Pipeline</button>
+  </div>
+
+  <!-- OUTPUT PANEL -->
+  <div class="output-panel" id="outputPanel">
+    <div class="placeholder">
+      <div class="placeholder-icon">🧬</div>
+      <strong>Enter patient profile and click Generate</strong><br>
+      <span style="color:var(--muted)">The navigator will output a personalized 5-layer treatment pipeline<br>based on 14 deep research sessions covering all major cancer types.</span>
+    </div>
+  </div>
+</div>
+
+<script>
+function getMuts() {
+  return [...document.querySelectorAll('input[name="mut"]:checked')].map(e=>e.value);
+}
+function getPrior() {
+  return [...document.querySelectorAll('input[name="prior"]:checked')].map(e=>e.value);
+}
+function v(id) { return document.getElementById(id).value; }
+function cb(id) { return document.getElementById(id).checked; }
+function num(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+function generatePipeline() {
+  const ct = v('cancerType'), stage = v('stage'), tme = v('tme');
+  const tmb = num('tmb'), pdl1 = num('pdl1');
+  const msi = v('msi'), her2 = v('her2'), viral = v('viral');
+  const muts = getMuts(), prior = getPrior();
+  const country = v('country'), budget = v('budget');
+  const ecog = parseInt(v('ecog')), age = num('age');
+  const egfr = num('egfr'), ef = num('ef');
+  const isIndia = country === 'India';
+
+  if (!ct || !stage) {
+    document.getElementById('outputPanel').innerHTML = '<div class="placeholder"><div class="placeholder-icon">⚠️</div>Please select a <strong>Cancer Type</strong> and <strong>Stage</strong> to generate your treatment pipeline.</div>';
+    alert('Please select Cancer Type and Stage');
+    return;
+  }
+
+  // ============ LAYER 1: CHANNEL ANALYSIS ============
+  let channels = [];
+  let activeChannels = [];
+
+  // Neoantigen channel
+  let neoScore = 0;
+  if (tmb >= 10) neoScore += (tmb >= 20 ? 3 : 1);
+  if (msi === 'MSI-H') neoScore += 3;
+  if (muts.includes('POLE')) neoScore += 3;
+  if (neoScore > 0) {
+    activeChannels.push('Neoantigen');
+    channels.push({name:'Neoantigen', active:true, detail:`TMB ${tmb||'?'} mut/Mb${msi==='MSI-H'?' + MSI-H':''}${muts.includes('POLE')?' + POLE/POLD1':''} → Frameshift neoantigens viable`, score: neoScore});
+  } else {
+    channels.push({name:'Neoantigen', active:false, detail:'TMB <10 + MSS = insufficient neoantigen load'});
+  }
+
+  // Viral antigen channel
+  if (viral !== 'None') {
+    activeChannels.push('Viral Antigen');
+    let vDetail = { HPV:'HPV E6/E7 oncoproteins (foreign antigens — highest immunogenicity)', EBV:'EBV LMP1/LMP2A/EBNA — tabelecleucel (FDA-approved PTLD), adoptive T cells', HBV:'HBV surface antigen; anti-viral + atezolizumab+bevacizumab (IMbrave150)', HCV:'HCV-associated HCC; direct-acting antivirals + ICI', MCPyV:'MCPyV LTAg — avelumab/pembrolizumab (JAVELIN: ORR 33%, KEYNOTE-017: ORR 56%)', KSHV:'KSHV — pegylated liposomal doxorubicin + immunotherapy' }[viral];
+    channels.push({name:'Viral Antigen', active:true, detail: vDetail, score:4});
+  } else {
+    channels.push({name:'Viral Antigen', active:false, detail:'No viral association detected'});
+  }
+
+  // Fusion protein channel
+  const hasFusion = muts.some(m=>['ALK','ROS1','RET','NTRK','BCR_ABL','KMT2A'].includes(m));
+  if (hasFusion) {
+    activeChannels.push('Fusion Protein');
+    channels.push({name:'Fusion Protein', active:true, detail:'Fusion junction creates unique neoepitope. Targeted TKI + immune synergy.', score:3});
+  } else {
+    channels.push({name:'Fusion Protein', active:false, detail:'No actionable fusion detected'});
+  }
+
+  // TAA channel
+  const taaList = [];
+  if (her2==='3+' || her2==='2+') taaList.push('HER2');
+  if (cb('cd19')) taaList.push('CD19');
+  if (cb('cd20')) taaList.push('CD20');
+  if (cb('bcma')) taaList.push('BCMA');
+  if (cb('psma')) taaList.push('PSMA');
+  if (cb('gd2')) taaList.push('GD2');
+  if (cb('cd30')) taaList.push('CD30');
+  // Cancer-type inferred TAAs
+  if (['Bladder','CRC','Gastric','Ovarian','Pancreatic','NSCLC','Breast','Mesothelioma','Prostate'].includes(ct)) {
+    if (ct==='Breast' && !taaList.includes('HER2')) taaList.push('TROP2');
+    if (['Mesothelioma','Ovarian','Pancreatic'].includes(ct)) taaList.push('Mesothelin');
+    if (['CRC','Gastric'].includes(ct)) taaList.push('CEA/CEACAM5');
+    if (ct==='Prostate' && !taaList.includes('PSMA')) taaList.push('PSMA');
+    if (ct==='Ovarian') taaList.push('FRα');
+  }
+  if (taaList.length > 0) {
+    activeChannels.push('TAA');
+    channels.push({name:'TAA', active:true, detail:`Active targets: ${taaList.join(', ')}`, score:taaList.length});
+  } else {
+    channels.push({name:'TAA', active:false, detail:'No high-confidence TAA targets identified from inputs'});
+  }
+
+  // CTA channel
+  const ctaCancers = ['Melanoma','Bladder','NSCLC','HNSCC','Ovarian','SynovialSarcoma'];
+  if (ctaCancers.includes(ct)) {
+    activeChannels.push('CTA');
+    channels.push({name:'CTA', active:true, detail:`NY-ESO-1/MAGE-A4 likely expressed in ${ct}. Afami-cel (TCR-T) FDA-approved for synovial sarcoma.${ct==='SynovialSarcoma'?' → First FDA-approved TCR-T in solid tumors':''}`, score:2});
+  } else {
+    channels.push({name:'CTA', active:false, detail:'Low CTA expression probability for this cancer type'});
+  }
+
+  // NK stress ligand channel
+  const nkActive = (tme==='Cold'||tme==='Desert') || prior.includes('Chemo') || ['AML','ALL','Myeloma','Neuroblastoma'].includes(ct);
+  if (nkActive) {
+    activeChannels.push('NK Stress Ligands');
+    channels.push({name:'NK Stress Ligands', active:true, detail:'MICA/MICB/ULBPs upregulated (stress). NK cell therapy, anti-NKG2D bispecifics applicable.', score:1});
+  } else {
+    channels.push({name:'NK Stress Ligands', active:false, detail:'NK stress ligand expression uncertain; low-cold TME or ICD-inducing chemo would activate this channel'});
+  }
+
+  // Glycan channel
+  const glycanCancers = ['Pancreatic','Ovarian','Gastric','Breast','Neuroblastoma'];
+  if (glycanCancers.includes(ct) || cb('gd2')) {
+    activeChannels.push('Glycan');
+    channels.push({name:'Glycan', active:true, detail:'Mucin/GD2 glycan targets. GD2-specific therapy (dinutuximab for neuroblastoma). MUC1/CA125 in ovarian.', score:1});
+  } else {
+    channels.push({name:'Glycan', active:false, detail:'Glycan targeting not primary for this cancer type'});
+  }
+
+  // ERV channel
+  const ervScore = tmb >= 15 || msi === 'MSI-H';
+  channels.push({name:'ERV', active:false, detail:'Endogenous retroviral elements — investigational; high TMB may upregulate ERV expression (experimental pathway)'});
+
+  // Lipid antigen channel
+  channels.push({name:'Lipid Antigen', active:false, detail:'CD1d-restricted NKT therapy — investigational; not yet clinically actionable as primary channel'});
+
+  const channelScore = activeChannels.length;
+
+  // ============ LAYER 0: STANDARD OF CARE ============
+  let layer0 = buildLayer0(ct, stage, muts, msi, tmb, pdl1, her2, viral, prior, ecog, muts.includes('del17p')||cb('del17p'), cb('ighvUnmut'), egfr, ef, isIndia, budget, cb('transplantEligible'));
+
+  // ============ LAYER 2: IMMUNE WEAPONS ============
+  let layer2 = buildLayer2(ct, stage, muts, msi, tmb, pdl1, her2, viral, channelScore, activeChannels, taaList, prior, country, budget, ecog, cb('cartEligible'), cb('hlaA0201'), cb('cd19'), cb('cd20'), cb('bcma'), cb('cd30'), tme, isIndia);
+
+  // ============ LAYER 3: TME ============
+  let layer3 = buildLayer3(ct, tme, muts, prior, stage, isIndia);
+
+  // ============ LAYER 4: MONITORING ============
+  let layer4 = buildLayer4(ct, muts, msi, isIndia, budget);
+
+  // ============ ALERTS ============
+  let alerts = buildAlerts(ct, muts, pdl1, prior, ecog, egfr, ef, her2, msi, viral, tme, stage);
+
+  // ============ SUCCESS RATES ============
+  let successRates = buildSuccessRates(ct, stage, muts, msi, tmb, pdl1, her2, viral, tme, channelScore, prior);
+
+  // ============ DATA GAPS ============
+  let dataGaps = buildDataGaps(ct, stage, muts, msi, tmb, pdl1, her2, viral, tme, prior, ecog);
+
+  renderOutput(ct, stage, tme, channelScore, channels, activeChannels, layer0, layer2, layer3, layer4, alerts, successRates, isIndia, budget, dataGaps);
+}
+
+function buildLayer0(ct, stage, muts, msi, tmb, pdl1, her2, viral, prior, ecog, del17p, ighvUnmut, egfr, ef, isIndia, budget, transplantEligible) {
+  const recs = [];
+  const budgetOK = budget === 'High' || budget === 'Unlimited' || budget === 'Medium';
+
+  if (ct === 'NSCLC') {
+    if (muts.includes('EGFR') && prior.includes('Targeted')) {
+      recs.push({t:'⚠️ Post-Osimertinib Progression — EGFR+',d:'Prior TKI failed. Options: Amivantamab + Lazertinib (MARIPOSA-2: PFS 6.3 mo post-osimertinib), Platinum + Pemetrexed + Bev (standard), or clinical trials (HERTHENA-Lung02 patritumab deruxtecan). Consider rebiopsy for resistance mechanism (C797S, MET amp, SCLC transformation).',c:'red'});
+      recs.push({t:'Platinum + Pemetrexed ± Bevacizumab',d:'Post-TKI chemotherapy backbone. Add bevacizumab if no contraindication. PFS ~5-6 mo.',c:'green'});
+    }
+    else if (muts.includes('EGFR')) recs.push({t:'Osimertinib (FLAURA2)',d:'PFS 25.5 vs 16.7 mo. 1st-line EGFR-mutated NSCLC. Do NOT add ICI until progression.',c:'green'});
+    else if (muts.includes('ALK') && prior.includes('Targeted')) {
+      recs.push({t:'⚠️ Post-ALK TKI Progression',d:'Prior ALK TKI failed. Options: Lorlatinib (if not yet used — CROWN trial), platinum+pemetrexed, or clinical trials. Rebiopsy for resistance mutations (ALK G1202R → lorlatinib).',c:'red'});
+    }
+    else if (muts.includes('ALK')) recs.push({t:'Alectinib (ALEX trial)',d:'PFS 34.8 mo vs 10.9 mo crizotinib. 1st-line ALK+. Lorlatinib if brain mets or resistance.',c:'green'});
+    else if (muts.includes('ROS1')) recs.push({t:'Crizotinib or Entrectinib',d:'ROS1+: crizotinib ORR 72%; entrectinib CNS-active. Lorlatinib for resistance.',c:'green'});
+    else if (muts.includes('RET')) recs.push({t:'Selpercatinib or Pralsetinib',d:'RET fusion: selpercatinib LIBRETTO-001 ORR 64%. CNS-active.',c:'green'});
+    else if (muts.includes('KRAS_G12C')) recs.push({t:'Sotorasib (CodeBreaK100) or Adagrasib (KRYSTAL-1)',d:'Sotorasib ORR 37.1%; Adagrasib ORR 42.9%. 2nd-line after ICI+chemo.',c:'green'});
+    else if (muts.includes('NTRK')) recs.push({t:'Larotrectinib or Entrectinib',d:'NTRK fusion: larotrectinib ORR 79% pan-tumor. Entrectinib CNS-active.',c:'green'});
+    else if (muts.includes('MET_ex14')) recs.push({t:'Capmatinib or Tepotinib',d:'MET exon 14 skip: capmatinib ORR 68% treatment-naive. GEOMETRY-mono-1.',c:'green'});
+    else if (pdl1 >= 50 && !prior.includes('ICI')) recs.push({t:'Pembrolizumab monotherapy (KEYNOTE-024)',d:'PD-L1 ≥50%, no driver mutation. mPFS 10.3 vs 6.0 mo. No chemo required.',c:'green'});
+    else recs.push({t:'Pembrolizumab + Carboplatin + Pemetrexed (KEYNOTE-189)',d:'Non-squamous stage IV NSCLC. OS 22 mo. Standard if no driver mutation.',c:'green'});
+    if (stage==='III' && !prior.includes('Radiation')) recs.push({t:'Chemoradiation → Durvalumab consolidation (PACIFIC)',d:'Unresectable stage III: PFS 17.2 vs 5.6 mo. Durvalumab 12 months post-CRT.',c:'blue'});
+  }
+
+  else if (ct === 'Melanoma') {
+    if (muts.includes('BRAF_V600E') && stage === 'IV' && prior.includes('ICI')) {
+      recs.push({t:'Dabrafenib + Trametinib (post-ICI progression)',d:'Prior ICI failed. BRAF V600E: dabrafenib+trametinib now appropriate. COMBI-d/v: ORR 76%, PFS 11.4 mo. DREAMseq ICI-first already attempted.',c:'green'});
+      recs.push({t:'Encorafenib + Binimetinib (COLUMBUS)',d:'Alternative BRAF+MEK combo. ORR 63%, PFS 14.9 mo. Consider if dabrafenib intolerance.',c:'yellow'});
+    } else if (muts.includes('BRAF_V600E') && stage === 'IV') {
+      recs.push({t:'⚠️ DREAMseq Rule: Immunotherapy FIRST',d:'Stage IV BRAF V600E: ipilimumab + nivolumab BEFORE dabrafenib + trametinib. DREAMseq: 2y OS 71.8% (ICI first) vs 51.5% (BRAF first). DO NOT start BRAF inhibitor first.',c:'red'});
+      recs.push({t:'Ipilimumab + Nivolumab (CheckMate 067)',d:'ORR 57.6%, CR 22%, 7.5y OS 43%. Use first. Switch to dabrafenib+trametinib only if ICI fails.',c:'green'});
+    } else if (stage === 'IV' && prior.includes('ICI')) {
+      recs.push({t:'Post-ICI Melanoma — Consider clinical trials',d:'Prior ipi+nivo failed. Options: relatlimab+nivo (RELATIVITY-047), lifileucel TIL therapy (Amtagvi — FDA 2024, ORR 31.4% post-ICI), or clinical trials.',c:'yellow'});
+    } else if (stage === 'IV') {
+      recs.push({t:'Ipilimumab + Nivolumab or Pembrolizumab',d:'CheckMate 067: ORR 57.6%. Pembrolizumab KEYNOTE-006: PFS 8.4 vs 5.5 mo vs ipilimumab.',c:'green'});
+    }
+    if (['I','II','III'].includes(stage) && !prior.includes('ICI')) {
+      recs.push({t:'Pembrolizumab adjuvant (KEYNOTE-716/KEYNOTE-054)',d:'Stage IIB/C: 58% RFS improvement. Stage III: RFS HR 0.60. 1 year pembrolizumab.',c:'blue'});
+    }
+    if (muts.includes('BRAF_V600E') && stage === 'IV') {
+      recs.push({t:'Dabrafenib + Trametinib (2nd-line, after ICI)',d:'COMBI-d/v: ORR 76%, PFS 11.4 mo. Use AFTER immunotherapy progression per DREAMseq.',c:'yellow'});
+    }
+  }
+
+  else if (ct === 'CRC') {
+    if (msi === 'MSI-H') {
+      recs.push({t:'Pembrolizumab 1st-line (KEYNOTE-177)',d:'MSI-H CRC: PFS 16.5 vs 8.2 mo vs FOLFOX. ORR 43.8%. Standard of care 1st-line.',c:'green'});
+      // If also BRAF V600E, show BRAF therapy as subsequent-line
+      if (muts.includes('BRAF_V600E')) recs.push({t:'Encorafenib + Cetuximab (BEACON) — post-ICI backup',d:'MSI-H + BRAF V600E: use pembrolizumab first. If ICI fails, encorafenib+cetuximab (ORR 26.8%, OS 9.0 mo). BRAF V600E CRC has worse ICI response than other MSI-H — monitor closely.',c:'yellow'});
+    } else if (muts.includes('KRAS_G12C')) {
+      recs.push({t:'Sotorasib or Adagrasib + cetuximab',d:'KRAS G12C CRC: adagrasib+cetuximab ORR 46% (KRYSTAL-10). Significant improvement.',c:'green'});
+    } else if (muts.includes('BRAF_V600E')) {
+      recs.push({t:'Encorafenib + Cetuximab (BEACON CRC)',d:'BRAF V600E CRC: ORR 26.8%, OS 9.0 vs 5.4 mo. After 1+ prior lines.',c:'green'});
+    } else {
+      recs.push({t:'FOLFOX or FOLFIRI + Bevacizumab',d:'RAS-mutated: anti-VEGF preferred. RAS-WT: cetuximab/panitumumab (left-sided primary).',c:'green'});
+    }
+    recs.push({t:'Oxaliplatin-based regimens (ICD-inducing)',d:'Oxaliplatin = highest ICD inducer. Promotes immunogenic cell death → synergy with checkpoint.',c:'blue'});
+  }
+
+  else if (ct === 'Breast') {
+    if (her2 === '3+') {
+      recs.push({t:'T-DXd (Trastuzumab deruxtecan) — DESTINY-Breast03',d:'HER2+ 2nd-line: PFS 28.8 vs 6.8 mo vs T-DM1. ORR 79.7%. Now preferred over T-DM1.',c:'green'});
+      recs.push({t:'Pertuzumab + Trastuzumab + Docetaxel (CLEOPATRA)',d:'1st-line HER2+: OS 57.1 vs 40.8 mo. Standard frontline with docetaxel.',c:'green'});
+    } else if (her2 === '1+' || her2 === '2+') {
+      recs.push({t:'T-DXd for HER2-low (DESTINY-Breast04)',d:'HER2-low (1+ or 2+/FISH−): PFS 9.9 vs 5.1 mo; OS 23.4 vs 16.8 mo. Revolutionary — HER2-low is now targetable.',c:'green'});
+    }
+    if (muts.includes('BRCA1') || muts.includes('BRCA2') || cb('germlineBRCA')) {
+      recs.push({t:'Olaparib (OlympiA — adjuvant) or Talazoparib',d:'Germline BRCA: olaparib adjuvant DFS HR 0.58. Metastatic: olaparib PFS 7.0 vs 4.2 mo vs chemo.',c:'green'});
+    }
+    recs.push({t:'Pembrolizumab + Chemotherapy (KEYNOTE-522)',d:'TNBC: pCR 64.8% vs 51.2%. EFS HR 0.63. Standard neoadjuvant for TNBC regardless of PD-L1.',c:ct.includes('HER')? 'yellow':'green'});
+    recs.push({t:'Sacituzumab govitecan (TROP2-ADC) — TROPiCS-02',d:'HR+/HER2− and TNBC: PFS 5.5 vs 4.0 mo after 2+ prior lines. Significant in TNBC.',c:'blue'});
+  }
+
+  else if (ct === 'Pancreatic') {
+    if (muts.includes('BRCA1') || muts.includes('BRCA2')) {
+      recs.push({t:'FOLFIRINOX → Olaparib maintenance (POLO trial)',d:'BRCA-mutated PDAC: olaparib maintenance PFS 7.4 vs 3.8 mo. First targeted therapy to show benefit in PDAC.',c:'green'});
+    }
+    recs.push({t:'FOLFIRINOX or Gemcitabine + nab-Paclitaxel',d:'Fit patients: FOLFIRINOX mOS 11.1 mo. Unfit: gem+nab-pac mOS 8.5 mo. No targeted therapy for KRAS non-G12C.',c:muts.includes('BRCA1')||muts.includes('BRCA2')?'yellow':'green'});
+    if (msi==='MSI-H') recs.push({t:'Pembrolizumab (KEYNOTE-158)',d:'MSI-H PDAC: ~18% ORR. Rare but use if MSI-H confirmed.',c:'yellow'});
+    recs.push({t:'Gemcitabine + nab-Paclitaxel (moderate ICD)',d:'Gemcitabine has moderate ICD-inducing effect. Layer 3 strategies critical for cold PDAC TME.',c:'blue'});
+  }
+
+  else if (ct === 'AML') {
+    if (muts.includes('FLT3')) {
+      recs.push({t:'7+3 + Midostaurin (RATIFY trial)',d:'FLT3+ AML: OS 74.7 vs 25.6 mo median. Standard frontline for fit FLT3+ AML.',c:'green'});
+      recs.push({t:'Gilteritinib (ADMIRAL) — R/R FLT3+',d:'R/R FLT3+: CR 21.1%, OS 9.3 vs 5.6 mo. 2nd-line standard.',c:stage==='RR'?'green':'blue'});
+    } else if (muts.includes('IDH1')) {
+      recs.push({t:'Ivosidenib ± Azacitidine',d:'IDH1-mutated: ivosidenib CR 21.7% single-agent. +azacitidine: ORR 70%+.',c:'green'});
+    } else if (muts.includes('IDH2')) {
+      recs.push({t:'Enasidenib (IDHIFA)',d:'IDH2-mutated R/R: CR 19.3%. Differentiation therapy.',c:'green'});
+    } else if (muts.includes('KMT2A')) {
+      recs.push({t:'Revumenib (AUGMENT-101)',d:'KMT2A-rearranged R/R: ORR 63%, CR 23%. FDA approved 2024. Menin inhibitor.',c:'green'});
+    }
+    if (ecog <= 1 && transplantEligible) {
+      recs.push({t:'Cytarabine + Daunorubicin 7+3 Induction',d:'Fit patients: 7+3. CR 60-80%. Bridge to allo-SCT in intermediate/high risk.',c:muts.includes('FLT3')?'blue':'green'});
+    } else {
+      recs.push({t:'Azacitidine + Venetoclax (VIALE-A)',d:'Unfit/elderly AML: OS 14.7 vs 9.6 mo vs azacitidine alone. CR+CRh 36.7% vs 17.9%.',c:'green'});
+    }
+  }
+
+  else if (ct === 'ALL') {
+    if (muts.includes('BCR_ABL')) {
+      recs.push({t:'Dasatinib or Ponatinib + Steroids (GIMEMA)',d:'Ph+ ALL: dasatinib-based CR 95%. Ponatinib for T315I. Add blinatumomab for MRD− target.',c:'green'});
+    } else {
+      recs.push({t:'Pediatric-inspired chemotherapy (VDLD/BFM)',d:'Ph-negative B-ALL: pediatric regimens superior to adult in AYA. CR >90%. MRD-guided escalation.',c:'green'});
+    }
+    recs.push({t:'Blinatumomab (CD19×CD3 BiTE) — MRD+ consolidation',d:'MRD+ after induction: blinatumomab MRD-negativity 88% (SWOG S1318). Reduces SCT need in adults.',c:'green'});
+    recs.push({t:'Inotuzumab ozogamicin (INO-VATE)',d:'R/R B-ALL: CR 80.7% vs 29.4%. Caution: VOD risk pre-SCT (ursodiol prophylaxis).',c:stage==='RR'?'green':'blue'});
+  }
+
+  else if (ct === 'CLL') {
+    if (del17p || muts.includes('TP53')) {
+      recs.push({t:'⚠️ NEVER Fludarabine if del(17p)/TP53',d:'BTKi (acalabrutinib or zanubrutinib) or venetoclax+obinutuzumab. Chemoimmunotherapy ineffective and dangerous.',c:'red'});
+      recs.push({t:'Venetoclax + Obinutuzumab (CLL14)',d:'del(17p) CLL: 5y PFS 62% vs 27%. Fixed 12-month course. MRD-guided stop.',c:'green'});
+    }
+    if (ighvUnmut) {
+      recs.push({t:'Zanubrutinib or Acalabrutinib (ALPINE/ELEVATE)',d:'IGHV-unmutated: continuous BTKi superior. Zanubrutinib PFS HR 0.65 vs ibrutinib, fewer cardiac events.',c:'green'});
+    } else {
+      recs.push({t:'Venetoclax + Obinutuzumab (CLL14)',d:'IGHV-mutated: fixed duration; MRD-negativity 62%. Possible cure fraction.',c:'green'});
+    }
+    if (prior.includes('Targeted')) {
+      recs.push({t:'Pirtobrutinib (BRUIN) — post-covalent BTKi',d:'C481S resistance: pirtobrutinib ORR 73% after 3+ prior lines including covalent BTKi. FDA 2023.',c:'green'});
+    }
+  }
+
+  else if (ct === 'DLBCL') {
+    if (stage === 'RR') {
+      recs.push({t:'CAR-T: Axi-cel (ZUMA-7) or Liso-cel (TRANSFORM)',d:'2nd-line R/R DLBCL: axi-cel EFS superior to SOC-ASCT. CR 65%. Standard 2nd-line for primary refractory or relapse within 12 months.',c:'green'});
+      recs.push({t:'Epcoritamab or Glofitamab (bispecific) — off-the-shelf',d:'CD20×CD3: epcoritamab ORR 38.9% R/R. No manufacturing wait. Use if CAR-T not feasible or post-CAR-T relapse. FDA 2023.',c:'green'});
+      recs.push({t:'Pola-R-CHP (POLARIX) — if no prior polatuzumab',d:'If relapsed after R-CHOP without prior polatuzumab: Pola-R-CHP. 2y PFS 76.7% vs 70.2%.',c:'yellow'});
+    } else {
+      recs.push({t:'Pola-R-CHP (POLARIX) — frontline advanced',d:'Polatuzumab vedotin + R-CHP: 2y PFS 76.7% vs 70.2% R-CHOP. FDA approved frontline 2023.',c:'green'});
+    }
+  }
+
+  else if (ct === 'Hodgkin') {
+    recs.push({t:'BV-AVD (ECHELON-1) or Nivo+AVD (SWOG S1826)',d:'Advanced HL: BV-AVD 6y PFS 82% vs 75% ABVD. SWOG S1826: nivo+AVD PFS HR 0.48. Both FDA-approved.',c:'green'});
+    recs.push({t:'PET-adapted de-escalation at 2 cycles',d:'Interim PET-negative → remove bleomycin (AVD×4). PET-positive → escalate to BEACOPP.',c:'blue'});
+    if (stage === 'RR') {
+      recs.push({t:'BV + Nivolumab (CheckMate 436)',d:'R/R HL: ORR 85%, CR 67%. PD-L1 universally expressed via 9p24.1 amplification. Best R/R combination.',c:'green'});
+    }
+  }
+
+  else if (ct === 'Myeloma') {
+    if (transplantEligible) {
+      recs.push({t:'Dara-VRd → ASCT → Dara-Len maintenance (PERSEUS)',d:'Transplant-eligible: PERSEUS PFS HR 0.42. Quadruplet → ASCT → maintenance now standard.',c:'green'});
+    } else {
+      recs.push({t:'Daratumumab + Lenalidomide + Dex (MAIA)',d:'Transplant-ineligible: 5y PFS 52.5% vs 28.7%. OS benefit confirmed.',c:'green'});
+    }
+    if (stage === 'RR') {
+      recs.push({t:'Cilta-cel CAR-T (CARTITUDE-4)',d:'1-3 prior lines including PI+IMID: PFS HR 0.26 vs SoC. CR 82.5%. Moving to earlier lines.',c:'green'});
+      recs.push({t:'Teclistamab (BCMA×CD3) or Talquetamab (GPRC5D×CD3)',d:'Off-the-shelf bispecific: teclistamab ORR 61.8% post-triple-class. Talquetamab ORR 73.6% post-BCMA exposure.',c:'yellow'});
+      if (muts.includes('BCR_ABL')) { /* t(11;14) logic */ }
+    }
+    if (isIndia) recs.push({t:'Bortezomib (generic) + Dexamethasone — India access',d:'Generic bortezomib (Velcade): ₹4,000-5,000/cycle via PMBJP vs ₹40,000+ branded. Widely available.',c:'blue'});
+  }
+
+  else if (ct === 'CML') {
+    recs.push({t:'Imatinib, Dasatinib, or Nilotinib (1st-line)',d:'CML chronic phase: imatinib CCyR 87%. Dasatinib/nilotinib faster responses. Goal: deep molecular remission (MR4.5).',c:'green'});
+    recs.push({t:'Asciminib (STAMP inhibitor) — post-2 TKI failure',d:'Asciminib ORR 80%+ in T315I. ASCEMBL: MMR 25.5% vs 40.8% bosutinib for non-T315I.',c:'blue'});
+    recs.push({t:'Treatment-free remission (TFR) goal',d:'After sustained MR4.5 for ≥2y: trial TKI discontinuation. ~50% maintain TFR at 12 months.',c:'blue'});
+  }
+
+  else if (ct === 'NPC') {
+    recs.push({t:'Cisplatin + RT (definitive) → EBV DNA monitoring',d:'Locoregional NPC: concurrent cisplatin-RT. EBV DNA falls to undetectable = excellent prognosis.',c:'green'});
+    recs.push({t:'Gemcitabine + Cisplatin + Tislelizumab (JUPITER-02)',d:'Metastatic NPC: tislelizumab+GP: PFS 9.2 vs 7.4 mo. Camrelizumab+GP (CAPTAIN-1) also approved.',c:'green'});
+    recs.push({t:'Toripalimab + Gemcitabine + Cisplatin',d:'JUPITER-02: ORR 77.4% vs 66.4% (GP alone). Improved OS at 3 years.',c:'yellow'});
+  }
+
+  else if (ct === 'Prostate') {
+    recs.push({t:'Lutetium-PSMA-617 (VISION trial)',d:'PSMA-positive mCRPC: OS 15.3 vs 11.3 mo. PSMA PET required (68Ga-PSMA). FDA 2022.',c:'green'});
+    if (muts.includes('BRCA1') || muts.includes('BRCA2') || cb('germlineBRCA')) {
+      recs.push({t:'Olaparib (PROfound) or Rucaparib',d:'HRR-mutated CRPC: olaparib rPFS 7.4 vs 3.6 mo. Sequencing: ARSI → HRR testing → olaparib.',c:'green'});
+    }
+    recs.push({t:'Androgen receptor pathway inhibitor (ARPI)',d:'Enzalutamide, abiraterone, darolutamide: backbone therapy. Sequence based on prior exposure.',c:'blue'});
+    if (isIndia && cb('psma')) recs.push({t:'Lu-PSMA-617 — India availability',d:'Available at Tata Memorial Mumbai, AIIMS Delhi, Apollo Hyderabad nuclear medicine. Cost ₹1.5-2.5L/cycle. 6 cycles.',c:'blue'});
+  }
+
+  else if (ct === 'Cervical') {
+    recs.push({t:'Pembrolizumab + Platinum + Paclitaxel ± Bevacizumab (KEYNOTE-826)',d:'Persistent/R/M cervical cancer: OS 24.4 vs 16.5 mo. mPFS 10.4 vs 8.2 mo. Standard regardless of PD-L1.',c:'green'});
+    recs.push({t:'Tisotumab vedotin (innovaTV 301)',d:'R/R cervical: ORR 17.8%; OS 11.5 vs 9.5 mo vs chemo. Tissue factor-targeting ADC.',c:'yellow'});
+    if (isIndia) recs.push({t:'Cervavac (Serum Institute) — HPV prevention',d:'India-developed quadrivalent HPV vaccine (₹200-400 government; ₹2,000-3,000 private). Not treatment but critical prevention.',c:'blue'});
+  }
+
+  else if (ct === 'HCC') {
+    recs.push({t:'Atezolizumab + Bevacizumab (IMbrave150)',d:'1st-line HCC: OS 19.2 vs 13.4 mo. PFS 6.8 vs 4.3 mo. Better than sorafenib. Check for varices first.',c:'green'});
+    recs.push({t:'Durvalumab + Tremelimumab (HIMALAYA)',d:'STRIDE regimen: OS 16.4 vs 13.8 mo (sorafenib). Single priming tremelimumab dose. Alternative 1st-line.',c:'yellow'});
+    if (viral === 'HBV') recs.push({t:'⚠️ Antiviral prophylaxis mandatory',d:'HBV+ patients: tenofovir/entecavir BEFORE any chemotherapy or immunotherapy. HBV reactivation can be fatal.',c:'red'});
+  }
+
+  else if (ct === 'Bladder') {
+    recs.push({t:'Enfortumab vedotin + Pembrolizumab (EV-302)',d:'1st-line metastatic: EV+pembro PFS 12.5 vs 6.3 mo, OS 31.5 vs 16.1 mo. Transformed field.',c:'green'});
+    recs.push({t:'Sacituzumab govitecan (TROPiCS — 2nd line)',d:'Post-ICI TROP2-directed. TROPHY-U-01 ORR 27%.',c:'yellow'});
+  }
+
+  else if (ct === 'GBM') {
+    recs.push({t:'Temozolomide + RT → Temozolomide maintenance (Stupp)',d:'MGMT-methylated: OS 21.7 vs 15.3 mo with temozolomide. Standard of care.',c:'green'});
+    recs.push({t:'Tumor treating fields (TTFields, Optune)',d:'Newly diagnosed GBM: EF-14 trial OS 20.9 vs 16.0 mo when added to temozolomide.',c:'yellow'});
+    if (muts.includes('IDH1') || muts.includes('IDH2')) recs.push({t:'IDH inhibitor (vorasidenib — INDIGO trial)',d:'IDH-mutant grade 2-3 glioma: PFS 27.7 vs 11.1 mo. FDA approved 2024. Not yet GBM standard.',c:'yellow'});
+  }
+
+  else if (ct === 'Mesothelioma') {
+    recs.push({t:'Ipilimumab + Nivolumab (CheckMate 743)',d:'1st-line mesothelioma: OS 18.1 vs 14.1 mo vs chemo. Sarcomatoid histology benefits most. FDA 2020.',c:'green'});
+    recs.push({t:'Pemetrexed + Cisplatin (unfit for ICI)',d:'Carboplatin substitution for renal impairment. CR+PR ~41%.',c:'blue'});
+  }
+
+  else if (ct === 'Ovarian') {
+    if ((muts.includes('BRCA1') || muts.includes('BRCA2') || cb('germlineBRCA')) && prior.includes('Targeted')) {
+      recs.push({t:'⚠️ Post-PARP Inhibitor Progression — BRCA+',d:'Prior olaparib/niraparib failed. Options: Platinum re-challenge (if platinum-free interval >6 months), mirvetuximab soravtansine (FRα+), bevacizumab+chemo, or clinical trials. Consider rebiopsy for BRCA reversion mutations.',c:'red'});
+    } else if (muts.includes('BRCA1') || muts.includes('BRCA2') || cb('germlineBRCA')) {
+      recs.push({t:'Olaparib maintenance (SOLO-2/SOLO-1)',d:'BRCA-mutated: olaparib 1st-line maintenance PFS 56.0 vs 13.8 mo (SOLO-1). Game-changer.',c:'green'});
+    }
+    recs.push({t:'Bevacizumab + Carboplatin + Paclitaxel → Bev maintenance',d:'ICON7/GOG-218: PFS benefit especially in high-risk (stage IV, inoperable stage III).',c:'green'});
+    recs.push({t:'Mirvetuximab soravtansine (MIRASOL — FRα+)',d:'FRα-high platinum-resistant ovarian: ORR 42.3% vs 15.9% chemotherapy. FDA 2022.',c:cb('psma')?'yellow':'blue'});
+  }
+
+  else if (ct === 'SynovialSarcoma') {
+    recs.push({t:'Afamitresgene autoleucel (afami-cel) — SPEARHEAD-1',d:'NY-ESO-1+/MAGE-A4+ synovial sarcoma: ORR 36.6%. First FDA-approved TCR-T in solid tumors (2024).',c:'green'});
+    recs.push({t:'Doxorubicin ± Ifosfamide',d:'1st-line sarcoma standard. Ifosfamide active in synovial. Response rate 25-40%.',c:'blue'});
+  }
+
+  else if (ct === 'Neuroblastoma') {
+    recs.push({t:'Dinutuximab + GM-CSF + IL-2 + isotretinoin (COG protocol)',d:'High-risk neuroblastoma: EFS 46% vs 34% at 2y. Anti-GD2 antibody maintenance after SCT.',c:'green'});
+    recs.push({t:'Induction: COJEC or GPOH-NB-2004',d:'Cisplatin + etoposide backbone. High-dose chemo → ASCT → dinutuximab maintenance.',c:'blue'});
+  }
+
+  else if (ct === 'RCC') {
+    if (muts.includes('VHL') || true) { // Most ccRCC driven by VHL loss
+      if (pdl1 >= 1 || tme === 'Hot' || tme === 'Warm') {
+        recs.push({t:'Ipilimumab + Nivolumab (CheckMate 214)',d:'Intermediate/poor risk ccRCC: 5y OS 47% vs 26.6%. CR 12%. 1st-line standard for IMDC intermediate/poor.',c:'green'});
+      }
+      recs.push({t:'Pembrolizumab + Axitinib (KEYNOTE-426)',d:'1st-line all-risk ccRCC: OS HR 0.68; PFS 15.4 vs 11.1 mo vs sunitinib. Effective across all IMDC risk groups.',c:'green'});
+      recs.push({t:'Cabozantinib + Nivolumab (CheckMate 9ER)',d:'1st-line ccRCC: PFS 16.6 vs 8.3 mo; OS HR 0.70. ORR 55.7% vs 27.1%. Cabo provides anti-VEGF + MET + AXL.',c:'green'});
+      recs.push({t:'Lenvatinib + Pembrolizumab (CLEAR/KEYNOTE-581)',d:'1st-line ccRCC: PFS 23.9 vs 9.2 mo vs sunitinib. ORR 71%. Highest response rate but more toxicity.',c:'yellow'});
+    }
+    if (stage === 'RR' || prior.includes('ICI')) {
+      recs.push({t:'Cabozantinib monotherapy (METEOR) or TKI switch',d:'Post-ICI ccRCC: cabozantinib PFS 7.4 mo. Alternatives: axitinib, lenvatinib+everolimus.',c:'green'});
+    }
+    if (muts.includes('PBRM1')) recs.push({t:'Note: PBRM1 loss may predict ICI benefit',d:'PBRM1-mutated ccRCC shows improved ICI response in some studies (Miao et al, Science 2018).',c:'blue'});
+  }
+
+  else if (ct === 'SCLC') {
+    recs.push({t:'Atezolizumab + Carboplatin + Etoposide (IMpower133)',d:'ES-SCLC 1st-line: OS 12.3 vs 10.3 mo. PFS 5.2 vs 4.3 mo. FDA approved. Standard frontline.',c:'green'});
+    recs.push({t:'Durvalumab + Platinum + Etoposide (CASPIAN)',d:'ES-SCLC 1st-line alternative: OS 12.9 vs 10.5 mo with durvalumab+plat+etop. OS HR 0.71 at 3y update.',c:'green'});
+    if (['I','II','III'].includes(stage)) {
+      recs.push({t:'Concurrent Chemoradiation (LS-SCLC)',d:'Limited-stage: cisplatin+etoposide + concurrent thoracic RT. CR 50-60%. Add prophylactic cranial irradiation (PCI) if response.',c:'green'});
+    }
+    if (stage === 'RR') {
+      recs.push({t:'Topotecan or Lurbinectedin',d:'2nd-line SCLC: lurbinectedin ORR 35.2% (monotherapy). Topotecan standard but inferior. Platinum rechallenge if sensitive relapse (>90 days).',c:'yellow'});
+    }
+    recs.push({t:'Tarlatamab (DLL3×CD3 BiTE — DeLLphi-301)',d:'3rd-line+ SCLC: ORR 40% at 10mg dose. DLL3 expressed in 80%+ SCLC. FDA accelerated approval 2024.',c:'yellow'});
+  }
+
+  else if (ct === 'HNSCC') {
+    if (pdl1 >= 1 && !prior.includes('ICI')) {
+      recs.push({t:'Pembrolizumab + Platinum + 5-FU (KEYNOTE-048)',d:'R/M HNSCC 1st-line: CPS≥20 OS 14.7 vs 11.0 mo; CPS≥1 OS 12.3 vs 10.3 mo. Pembro+chemo standard for CPS≥1.',c:'green'});
+    } else if (pdl1 >= 20) {
+      recs.push({t:'Pembrolizumab monotherapy (KEYNOTE-048)',d:'CPS≥20: pembro monotherapy OS 14.8 mo vs 10.7 chemo. Less toxicity option for high CPS.',c:'green'});
+    } else {
+      recs.push({t:'Platinum + 5-FU + Cetuximab (EXTREME)',d:'PD-L1 negative/low R/M HNSCC: cetuximab+plat+5FU OS 10.1 mo. Historical standard.',c:'green'});
+    }
+    if (viral === 'HPV') recs.push({t:'Note: HPV+ HNSCC has better prognosis',d:'HPV+ oropharyngeal: 3y OS 82% vs 57% HPV-. De-escalation trials ongoing. ICI especially effective in HPV+.',c:'blue'});
+    if (['III','IV'].includes(stage) && !prior.includes('Radiation')) {
+      recs.push({t:'Definitive Chemoradiation (cisplatin-based)',d:'Locally advanced HNSCC: concurrent cisplatin 100mg/m² q3w + RT 70Gy/35fx. Adjuvant: pembro KEYNOTE-412 (PFS HR 0.83).',c:'green'});
+    }
+  }
+
+  else if (ct === 'Gastric') {
+    if (her2 === '3+' || her2 === '2+') {
+      recs.push({t:'Trastuzumab + Chemotherapy (ToGA)',d:'HER2+ gastric 1st-line: OS 13.8 vs 11.1 mo. Standard with cisplatin + capecitabine/5-FU.',c:'green'});
+      recs.push({t:'T-DXd (DESTINY-Gastric01/02)',d:'HER2+ gastric 2nd-line: ORR 51% vs 14% (DG-01). OS 12.5 vs 8.4 mo. Practice-changing in 2nd-line.',c:'green'});
+    }
+    if (pdl1 >= 5 || true) { // Nivo+chemo now standard regardless in 1st-line
+      recs.push({t:'Nivolumab + Chemotherapy (CheckMate 649)',d:'1st-line HER2- gastric/GEJ: CPS≥5 OS 14.4 vs 11.1 mo; all-comers OS 13.8 vs 11.6 mo. Standard frontline.',c:'green'});
+    }
+    recs.push({t:'Pembrolizumab + Chemotherapy (KEYNOTE-859)',d:'1st-line HER2- gastric: OS HR 0.78. Especially CPS≥10: OS HR 0.65. Alternative to nivo-based.',c:'green'});
+    if (msi === 'MSI-H') recs.push({t:'Pembrolizumab 1st-line (KEYNOTE-158/177 extrapolation)',d:'MSI-H gastric: exceptional ICI response. ORR ~50-60%. Consider ICI monotherapy.',c:'green'});
+    if (viral === 'EBV') recs.push({t:'Note: EBV+ gastric — very high ICI response',d:'EBV+ gastric shows PD-L1 overexpression, high TILs. ORR to checkpoint may exceed 80%. Prioritize ICI.',c:'blue'});
+    recs.push({t:'Zolbetuximab (GLOW/SPOTLIGHT) — CLDN18.2+',d:'Claudin18.2+ HER2- gastric: zolbetuximab+chemo PFS 8.2 vs 6.8 mo (SPOTLIGHT). New target. FDA 2024.',c:'yellow'});
+  }
+
+  else if (ct === 'MCC') {
+    recs.push({t:'Avelumab (JAVELIN Merkel 200) or Pembrolizumab',d:'1st-line MCC: avelumab ORR 62.1% (chemo-naive), pembrolizumab ORR 56% (KEYNOTE-017). ICI is frontline standard.',c:'green'});
+    if (stage === 'IV' || stage === 'RR') {
+      recs.push({t:'Avelumab maintenance',d:'Continue avelumab beyond response: 1/3 have durable CR >3 years. MCPyV-positive tumors especially responsive.',c:'green'});
+    }
+    if (['I','II','III'].includes(stage)) recs.push({t:'Surgery + Adjuvant RT ± ICI',d:'Early MCC: wide excision + SLNB. Adjuvant RT reduces local recurrence. Adjuvant ICI under investigation (ADAM trial).',c:'blue'});
+  }
+
+  else {
+    recs.push({t:'MSI/TMB-based standard of care',d:'Consult oncology for cancer-specific protocol. MSI-H → pembrolizumab (KEYNOTE-158, ORR 36%). TMB-H → pembrolizumab.',c:'yellow'});
+    if (msi === 'MSI-H') recs.push({t:'Pembrolizumab (KEYNOTE-158 — MSI-H pan-tumor)',d:'ORR 36% across all MSI-H solid tumors. FDA tumor-agnostic approval 2017.',c:'green'});
+  }
+
+  return recs;
+}
+
+function buildLayer2(ct, stage, muts, msi, tmb, pdl1, her2, viral, channelScore, activeChannels, taaList, prior, country, budget, ecog, cartEligible, hlaPos, cd19, cd20, bcma, cd30, tme, isIndia) {
+  const recs = [];
+
+  // MSI-H always gets pembrolizumab
+  if (msi === 'MSI-H' && !prior.includes('ICI')) {
+    recs.push({t:'Pembrolizumab (KEYNOTE-158/KEYNOTE-177)',d:'MSI-H any cancer: ORR 36% pan-tumor. Colorectal 1st-line: ORR 43.8%. Tumor-agnostic FDA approval.',c:'green',tier:'Strong'});
+  }
+
+  // High PD-L1 solid tumors
+  if (pdl1 >= 50 && !['AML','ALL','CLL','CML','Myeloma'].includes(ct) && !prior.includes('ICI')) {
+    recs.push({t:`Pembrolizumab or Atezolizumab monotherapy`,d:`PD-L1 ≥50%: checkpoint monotherapy viable. Especially potent in NSCLC (KEYNOTE-024), bladder, cervical.`,c:'green',tier:'Strong'});
+  }
+
+  // CAR-T recommendations
+  if (cartEligible && ['ALL','DLBCL','Myeloma','CLL','Hodgkin'].includes(ct)) {
+    if (cd19 || ['ALL','DLBCL','CLL'].includes(ct)) {
+      if (isIndia) {
+        recs.push({t:'NexCAR19 (India) — CD19 CAR-T',d:'DCGI-approved 2023. IIT Bombay/ImmunoACT. B-ALL CR 73%, DLBCL CR 60%. Cost: ₹37-42 lakh vs ₹3-4 crore imported. Available: Tata Memorial Mumbai, AIIMS Delhi, HCG.',c:'green',tier:'Strong'});
+      } else {
+        recs.push({t:'Tisagenlecleucel (Kymriah) or Liso-cel — CD19 CAR-T',d:'B-ALL CR 81%. DLBCL 2nd-line: liso-cel EFS superior to SOC. Axi-cel ZUMA-7: EFS HR superior.',c:'green',tier:'Strong'});
+      }
+    }
+    if (bcma || ct === 'Myeloma') {
+      recs.push({t:'Cilta-cel (Carvykti) — BCMA CAR-T',d:'Myeloma 1-3 prior lines: CARTITUDE-4 PFS HR 0.26. CR 82.5%. Largest benefit seen in myeloma. Superior to bispecific in duration.',c:'green',tier:'Strong'});
+    }
+  }
+
+  // Neoantigen vaccines
+  if (activeChannels.includes('Neoantigen') && tmb >= 10) {
+    if (ct === 'Melanoma') {
+      recs.push({t:'mRNA-4157/V940 + Pembrolizumab (KEYNOTE-942)',d:'High-risk melanoma: 65% reduction in recurrence at 18 months vs pembro alone. mRFS not reached. FDA Breakthrough Designation. BNT111 also in trials.',c:'green',tier:'Strong'});
+    } else {
+      recs.push({t:'Personalized neoantigen mRNA vaccine (investigational)',d:'TMB ≥10: WES → neoantigen prediction → mRNA vaccine. BNT122 (BioNTech/Genentech) in PDAC trial (significant DFS benefit). NEON-1 for NSCLC.',c:'yellow',tier:'Emerging'});
+    }
+  }
+
+  // Viral antigen targeting
+  if (viral === 'HPV') {
+    recs.push({t:'ISA101b HPV E6/E7 peptide vaccine + nivolumab',d:'ISA101b + nivo: ORR 33% (vs 8% nivo alone). Phase II oropharyngeal HPV+ HNSCC. E6/E7 are foreign — high immunogenicity.',c:'yellow',tier:'Consider'});
+  }
+  if (viral === 'EBV') {
+    recs.push({t:'Tabelecleucel (tab-cel) — EBV-specific T cells',d:'EBV+ PTLD: FDA approved 2022. ORR 51%. Allogeneic off-the-shelf EBV-specific cytotoxic T lymphocytes.',c:'green',tier:'Strong'});
+  }
+  if (viral === 'MCPyV') {
+    recs.push({t:'Avelumab (JAVELIN Merkel 200) or Pembrolizumab',d:'MCC: avelumab ORR 33.0%, OS 12.9 mo (1st-line). Pembrolizumab KEYNOTE-017 ORR 56% (1st-line). Best checkpoint response rate in oncology.',c:'green',tier:'Strong'});
+  }
+
+  // HER2 ADC
+  if (her2 === '3+' || her2 === '2+' || taaList.includes('HER2')) {
+    recs.push({t:'T-DXd (Trastuzumab Deruxtecan)',d:'HER2+ 2nd-line: PFS 28.8 mo (DESTINY-Breast03). HER2-low (1+/2+): OS 23.4 mo (DESTINY-Breast04). Pan-tumor HER2: DESTINY-PanTumor01 ORR 37.1%.',c:'green',tier:'Strong'});
+  }
+
+  // Bispecific antibodies
+  if (['Hodgkin','DLBCL','Myeloma','ALL'].includes(ct) && stage === 'RR') {
+    if (ct==='Hodgkin') recs.push({t:'BV + Nivolumab (CheckMate 436)',d:'R/R HL: ORR 85%, CR 67%. PD-L1 universally expressed. Combination of CD30-ADC + checkpoint.',c:'green',tier:'Strong'});
+    if (ct==='DLBCL') recs.push({t:'Epcoritamab (CD20×CD3) or Glofitamab',d:'R/R DLBCL: epcoritamab ORR 38.9%, CR 22% (EPCORE NHL-1). Off-the-shelf, no manufacturing wait. FDA 2023.',c:'yellow',tier:'Consider'});
+    if (ct==='Myeloma') recs.push({t:'Teclistamab (BCMA×CD3) or Talquetamab (GPRC5D×CD3)',d:'Teclistamab ORR 61.8%, CR 46% (MajesTEC-1). Talquetamab ORR 73.6% post-BCMA (MonumenTAL-1).',c:'green',tier:'Strong'});
+  }
+
+  // TCR-T
+  if (ct === 'SynovialSarcoma' && hlaPos) {
+    recs.push({t:'Afami-cel (HLA-A*02:01+ NY-ESO-1+)',d:'SPEARHEAD-1: ORR 36.6%, mDoR 6 months. FDA approved 2024. First solid tumor TCR-T. Requires HLA-A*02:01 and NY-ESO-1 expression.',c:'green',tier:'Strong'});
+  }
+
+  // NK cell therapy
+  if (activeChannels.includes('NK Stress Ligands') && ['AML','Neuroblastoma','Myeloma'].includes(ct)) {
+    recs.push({t:'NK cell therapy (IPH2101 or FT516 or cord blood NK)',d:'GD2 or NKG2D ligand upregulation. Phase I/II: NK infusion + IL-2 or anti-CD38. Active in AML, myeloma, neuroblastoma.',c:'yellow',tier:'Emerging'});
+  }
+
+  // PARP inhibitors in BRCA context
+  if (muts.includes('BRCA1') || muts.includes('BRCA2') || cb('germlineBRCA')) {
+    if (!['Breast','Ovarian','Prostate','Pancreatic'].includes(ct)) {
+      recs.push({t:'PARP inhibitor (BRCA-mutated, any tumor)',d:'Olaparib FDA tumor-agnostic for BRCA1/2-mutated: breast, ovarian, prostate, pancreatic. Off-label rationale for other BRCA+ tumors.',c:'yellow',tier:'Consider'});
+    }
+  }
+
+  if (recs.length === 0) {
+    recs.push({t:'No high-confidence immune weapon identified from current inputs',d:'Consider: whole-exome sequencing for neoantigen discovery, comprehensive IHC panel for TAA expression, MSI/MMR testing if not done.',c:'yellow',tier:'Data needed'});
+  }
+
+  return recs;
+}
+
+function buildLayer3(ct, tme, muts, prior, stage, isIndia) {
+  const strats = [];
+  const isCold = ['Cold','Desert','Excluded'].includes(tme);
+  const isHeme = ['AML','ALL','CLL','CML','Myeloma','DLBCL','Hodgkin'].includes(ct);
+
+  // Heme malignancies — TME strategies don't apply the same way as solid tumors
+  if (isHeme) {
+    strats.push({t:'Immunomodulation (heme-specific)',d:'Blood cancers respond to lenalidomide (CLL, myeloma), bispecific antibodies, and CAR-T — not solid-tumor TME conversion. TME strategies like anti-VEGF and STING are not applicable here.',c:'blue'});
+    if (['CLL','DLBCL','ALL'].includes(ct)) strats.push({t:'Lenalidomide immunomodulation',d:'Enhances NK cell and T-cell function. CLL: lenalidomide+rituximab. DLBCL: R²-polatuzumab combinations in trials.',c:'yellow'});
+    if (['AML','ALL'].includes(ct)) strats.push({t:'Hypomethylating agents (immune priming)',d:'Azacitidine/decitabine upregulate tumor antigens and PD-L1. Prime for checkpoint combinations (aza+nivo in AML).',c:'yellow'});
+    return strats;
+  }
+
+  if (isCold) {
+    strats.push({t:'Anti-VEGF (Bevacizumab)',d:'Prune immature tumor vasculature → normalize → T-cell infiltration. Combine with checkpoint (IMpower150 shows synergy in NSCLC).',c:'green'});
+    strats.push({t:'STING agonist (ADU-S100, DMXAA analogue) ⚠️ TRIAL TERMINATED',d:'⚠️ ADU-S100 Phase II terminated by Novartis (2020) — poor systemic PK, injection-site reactions. Next-gen STING (E7766, SNX281, TAK-676) in early trials. Concept valid but no approved agent. Intratumoral delivery limiting.',c:'red'});
+    strats.push({t:'Low-dose radiation (stereotactic)',d:'8 Gy × 3 fractions: ICD induction + antigen release. Abscopal effect when combined with checkpoint. Sequence: radiation → checkpoint 1-2 weeks later.',c:'green'});
+    strats.push({t:'IDO1 inhibitor (linrodostat/epacadostat) ⚠️ ECHO-301 FAILED',d:'⚠️ Epacadostat FAILED Phase III ECHO-301 in melanoma — no PFS/OS benefit over pembro alone. Linrodostat also failed Phase III. Class considered failed unless biomarker-selected. Do NOT prioritize.',c:'red'});
+    strats.push({t:'TGF-β blockade (bintrafusp alfa or vactosertib) ⚠️ PHASE III FAILED',d:'⚠️ Bintrafusp alfa FAILED Phase III in biliary tract (INTR@PID BTC 055) and NSCLC (INTR@PID Lung 037) — no benefit over pembro. Vactosertib still Phase II. TGF-β remains valid target but no approved agent. Consider vactosertib in trials only.',c:'red'});
+    strats.push({t:'Metronomic chemotherapy (CXCL9/10 induction)',d:'Low-dose daily oral cyclophosphamide or capecitabine: depletes Tregs, induces CXCL9/10 → T-cell recruitment. Add before checkpoint.',c:'green'});
+  } else if (tme === 'Hot') {
+    strats.push({t:'Checkpoint maintenance (tumor is already hot)',d:'Maintain immune activation. Double checkpoint (ipi+nivo) may escalate. Watch for irAEs.',c:'green'});
+    strats.push({t:'Anti-LAG3 (relatlimab — RELATIVITY-047)',d:'Hot TME with exhaustion: relatlimab+nivo in melanoma: PFS 10.1 vs 4.6 mo vs nivo alone. Second checkpoint target.',c:'yellow'});
+    strats.push({t:'OX40 agonist or 4-1BB agonist ⚠️ DEVELOPMENT STALLED',d:'⚠️ Urelumab (4-1BB): dose-limited by hepatotoxicity, trials paused. PF-04518600 (OX40): Phase I/II only, modest single-agent activity. Concept valid but no agents advancing to Phase III. Consider only in clinical trial context.',c:'red'});
+  } else if (tme === 'Warm') {
+    strats.push({t:'Checkpoint inhibitor (primary strategy)',d:'Warm TME: T cells present but not maximally active. Checkpoint likely effective.',c:'green'});
+    strats.push({t:'Anti-VEGF to improve infiltration',d:'Normalize vessels, increase T-cell access. IMpower150 regimen (atezo+bev+chemo) adds antiangiogenic to checkpoint.',c:'yellow'});
+  } else {
+    strats.push({t:'TME status unknown — assess before Layer 3 strategy',d:'Biopsy for TIL count, CD8+ T cell quantification, PD-L1. Comprehensive tumor immune profiling (NanoString IO360 panel).',c:'yellow'});
+  }
+
+  // Cancer-specific Layer 3
+  if (ct === 'Pancreatic') {
+    strats.push({t:'CAR-T + CXCR2 overexpression (investigational)',d:'PDAC stromal barrier: engineer CAR-T to express CXCR2 (guided by CXCL1/2 tumor gradient). Stroma depletion: PEGPH20 (hyaluronidase) + checkpoint (Phase II).',c:'yellow'});
+    strats.push({t:'FAP-targeted CAR-T or oncolytic virus',d:'FAP+ cancer-associated fibroblasts drive PDAC exclusion. FAP-CAR-T depletes stroma. OV Pexa-Vec in combination.',c:'yellow'});
+  }
+  if (ct === 'GBM') {
+    strats.push({t:'Oncolytic virus (DNX-2401) + pembrolizumab',d:'Intratumoral DNX-2401 (Delta-24-RGD): 20% long-term survivors. Phase II: ORR 10%, some durable CRs. Induction of immune infiltration in desert TME.',c:'yellow'});
+    strats.push({t:'mRNA STING agonist intratumoral + anti-PD1',d:'GBM is immune-excluded; systemic ICI fails. Intratumoral STING: Phase I signal. BBB-penetrating nanoparticles under development.',c:'yellow'});
+  }
+
+  if (prior.includes('Chemo') && isCold) {
+    strats.push({t:'Sequence: ICD-inducing chemo FIRST → checkpoint 3-4 weeks later',d:'Oxaliplatin or cyclophosphamide first (ICD induction) → antigen release → checkpoint to prevent re-exhaustion. Timing is critical.',c:'green'});
+  }
+
+  if (isIndia && isCold) {
+    strats.push({t:'India access: Metronomic + bevacizumab',d:'Low-dose cyclophosphamide (₹200/day) + bevacizumab biosimilar (₹8,000-15,000/cycle). Feasible cold-tumor strategy at medium budget.',c:'blue'});
+  }
+
+  return strats;
+}
+
+function buildLayer4(ct, muts, msi, isIndia, budget) {
+  const monitors = [];
+  const budgetFull = budget === 'High' || budget === 'Unlimited';
+
+  // ctDNA
+  monitors.push({t:'ctDNA (liquid biopsy) — Primary Layer 4 tool',d:'Rising VAF precedes radiographic progression by 4-8 weeks. Serial monitoring every 6-8 weeks. Guardant360 or Foundation Medicine. Rising ctDNA = treatment failure signal.',c:'green'});
+
+  // Cancer-specific monitoring
+  if (ct === 'Melanoma') {
+    monitors.push({t:'LDH + S100B every 8-12 weeks',d:'LDH rising → bulk tumor growth. S100B: melanoma-specific. PET/CT at 12 weeks (Deauville-inspired assessment).',c:'blue'});
+    monitors.push({t:'BRAF V600E ctDNA tracking',d:'Rising BRAF V600E VAF in melanoma = acquired BRAF resistance developing. Switch to TKI if on ICI (and BRAF+).',c:muts.includes('BRAF_V600E')?'green':'yellow'});
+  }
+  if (ct === 'NSCLC') {
+    monitors.push({t:'EGFR/KRAS/ALK ctDNA for resistance mutations',d:'EGFR: monitor for T790M or C797S. KRAS G12C: Y96D resistance. Rising driver mutation ctDNA = switch therapy. CT chest every 8-12 weeks.',c:'green'});
+  }
+  if (ct === 'AML') {
+    monitors.push({t:'MRD by NGS (NPM1/FLT3/IDH digital PCR)',d:'Sensitivity 10⁻⁵. Rising MRD post-induction or post-SCT → pre-emptive intervention. NPM1 most reliable AML marker.',c:'green'});
+    monitors.push({t:'Bone marrow biopsy at 14-28 days post-induction',d:'CR morphologic assessment. MRD by 8-color flow cytometry. If MRD+: consider intensification or CAR-T bridge.',c:'green'});
+  }
+  if (ct === 'CML') {
+    monitors.push({t:'BCR-ABL1 PCR (International Scale) monthly × 3, then q3mo',d:'Goal MMR (<0.1% IS) by 12 months. MR4.5 (<0.0032%) enables TFR trial. Resistance: sequence kinase domain.',c:'green'});
+  }
+  if (['ALL'].includes(ct)) {
+    monitors.push({t:'MRD by flow cytometry (LAIP) — Day 15, 29, post-consolidation',d:'Day 29 MRD- = best predictor sustained remission. MRD+ → blinatumomab consolidation. NGS MRD (clonoSEQ) sensitivity 10⁻⁶.',c:'green'});
+  }
+  if (ct === 'Myeloma') {
+    monitors.push({t:'M-protein (SPEP) + serum free light chains q1-3 months',d:'>25% M-protein increase from nadir = progression. sFLC ratio >100 = progression indicator. PET/CT for extramedullary disease.',c:'green'});
+    monitors.push({t:'MRD by NGS (clonoSEQ) at key milestones',d:'Post-induction, post-SCT, 1y post-CAR-T. MRD- sustained = guide maintenance duration. Sensitivity 10⁻⁵ to 10⁻⁶.',c:budgetFull?'green':'yellow'});
+  }
+  if (ct === 'NPC') {
+    monitors.push({t:'EBV DNA (plasma) q3 months',d:'Gold standard NPC monitoring. Undetectable post-treatment = excellent prognosis. Rising EBV DNA = earliest relapse signal. Sensitivity before clinical symptoms.',c:'green'});
+  }
+  if (ct === 'CLL') {
+    monitors.push({t:'MRD by flow or NGS at end of venetoclax treatment',d:'MRD- = treatment stop per CLL14 protocol. MRD+ at 12 months → extend or switch. BTK resistance: ctDNA for C481S mutation.',c:'green'});
+  }
+  if (ct === 'HCC') {
+    monitors.push({t:'AFP + liver MRI (LIRADS) q8-12 weeks',d:'AFP: baseline, q8w. mRECIST for HCC-specific response. Dynamic enhancement phase for viability. AFP rise >50% = inadequate response.',c:'green'});
+    monitors.push({t:'HBV DNA (viral load) if HBV-associated',d:'On anti-viral: HBV DNA monthly × 3, then q3mo. Any detectable HBV DNA on treatment = resistance → switch antiviral.',c:viral==='HBV'?'red':'yellow'});
+  }
+
+  if (msi === 'MSI-H') {
+    monitors.push({t:'ctDNA + MSI status in ctDNA',d:'MSI-H: ctDNA can track microsatellite instability in liquid. Rising ctDNA from MSI-H tumor = checkpoint failure. Repeat biopsy for MSI status if ctDNA rises.',c:'yellow'});
+  }
+
+  // India-specific
+  if (isIndia) {
+    monitors.push({t:'India monitoring — practical protocol',d:'ctDNA: Strand Life Sciences (Bengaluru), Oncostem. Cost ₹25,000-40,000. For blood cancers: MRD by flow at Tata Memorial/AIIMS (₹3,000-8,000). Plasma EBV DNA: most major labs ₹1,500-3,000.',c:'blue'});
+  }
+
+  // Universal monitoring rules
+  monitors.push({t:'Imaging response assessment: RECIST 1.1 or iRECIST',d:'Solid tumors: CT chest/abdomen/pelvis q8-12 weeks. iRECIST for immunotherapy (pseudo-progression). First scan at 6-8 weeks. Rising CEA/CA19-9/CA-125 before imaging.',c:'blue'});
+
+  return monitors;
+}
+
+function buildAlerts(ct, muts, pdl1, prior, ecog, egfr, ef, her2, msi, viral, tme, stage) {
+  const alerts = [];
+
+  // DREAMseq alert
+  if (ct === 'Melanoma' && muts.includes('BRAF_V600E') && stage === 'IV') {
+    alerts.push({title:'⚠️ DREAMseq Rule — Critical Sequencing',msg:'Stage IV BRAF V600E melanoma: ALWAYS start with immunotherapy (ipi+nivo or pembrolizumab). DREAMseq trial: ICI-first 2y OS 71.8% vs 51.5% BRAF-first. Starting dabrafenib+trametinib first significantly worsens long-term outcomes.'});
+  }
+
+  // EGFR + ICI contraindication
+  if (ct === 'NSCLC' && muts.includes('EGFR') && (prior.includes('ICI') || pdl1 > 0)) {
+    alerts.push({title:'⚠️ EGFR Mutation: Avoid ICI Until Progression',msg:'EGFR-mutated NSCLC: checkpoint inhibitors (pembrolizumab) have low response rate AND increased toxicity risk when given with or before EGFR TKI. Use osimertinib first. ICI consideration only at TKI resistance, with caution.'});
+  }
+
+  // del(17p)/TP53 CLL
+  if (ct === 'CLL' && (cb('del17p') || muts.includes('TP53'))) {
+    alerts.push({title:'⚠️ del(17p)/TP53 — No Fludarabine',msg:'Fludarabine-based regimens (FCR, BR with fludarabine) are contraindicated in del(17p) or TP53-mutated CLL. p53 pathway is required for fludarabine-induced apoptosis. Use BTKi or venetoclax-obinutuzumab exclusively.'});
+  }
+
+  // HBV reactivation
+  if (viral === 'HBV') {
+    alerts.push({title:'⚠️ HBV Reactivation — Mandatory Prophylaxis',msg:'HBV+ patients receiving any immunosuppression (chemotherapy, checkpoint inhibitor, rituximab, steroids): MANDATORY tenofovir or entecavir before starting treatment. Continue for 6-12 months after. Risk of fatal fulminant hepatitis if untreated.'});
+  }
+
+  // Cardiac contraindications
+  if (ef > 0 && ef < 50) {
+    alerts.push({title:'⚠️ Reduced EF — Cardiotoxicity Risk',msg:`EF ${ef}%: Avoid or dose-reduce anthracyclines (doxorubicin). T-DXd and trastuzumab: monitor EF every 3 months. Belantamab mafodotin: not primarily cardiotoxic but monitor. Consider cardiology co-management.`});
+  }
+
+  // Renal impairment
+  if (egfr > 0 && egfr < 45) {
+    alerts.push({title:'⚠️ Impaired Renal Function (eGFR <45)',msg:`eGFR ${egfr} mL/min: Cisplatin contraindicated (requires eGFR >60). Substitute carboplatin. Methotrexate: significant dose reduction needed. Imatinib: no adjustment, but monitor. Olaparib: dose reduce if eGFR <31. Venetoclax: monitor electrolytes (TLS risk).`});
+  }
+
+  // ECOG
+  if (ecog >= 2 && ['AML','NSCLC','Pancreatic'].includes(ct)) {
+    alerts.push({title:'⚠️ ECOG ≥2 — Treatment Intensity Risk',msg:`PS ${ecog}: Intensive regimens (7+3, FOLFIRINOX, CHOP) carry high toxicity risk. Consider: attenuated FOLFIRINOX (FFX-modified), HMA+venetoclax (AML), single-agent gemcitabine (PDAC). Geriatric/frailty assessment recommended.`});
+  }
+
+  // iRECIST pseudo-progression
+  if (prior.includes('ICI') || pdl1 > 0) {
+    alerts.push({title:'ℹ️ Pseudo-Progression Alert',msg:'On checkpoint inhibitors: apparent imaging progression at first scan (4-12 weeks) may be pseudo-progression (immune infiltration) in up to 10% of patients. Confirm with iRECIST: only call PD if unambiguous or clinical deterioration. Consider biopsy before changing therapy.'});
+  }
+
+  return alerts;
+}
+
+function buildSuccessRates(ct, stage, muts, msi, tmb, pdl1, her2, viral, tme, channelScore, prior) {
+  let baseOR = 30, basePFS = '6 months', baseOS = '12-18 months';
+  let personalizedOR = baseOR, personalizedPFS = basePFS, personalizedOS = baseOS;
+  let qualifier = '';
+
+  // Best-case estimates by profile
+  if (msi === 'MSI-H') { personalizedOR = 43; personalizedPFS = '16.5 months'; personalizedOS = 'Likely >36 months'; qualifier = 'MSI-H significantly improves immunotherapy response.'; }
+  if (tmb >= 20) { personalizedOR = Math.min(personalizedOR + 15, 65); }
+  if (pdl1 >= 50 && !['AML','ALL','CLL','CML','Myeloma'].includes(ct)) { personalizedOR = Math.min(personalizedOR + 10, 60); personalizedPFS = '10-13 months'; }
+
+  if (ct === 'Melanoma' && tme === 'Hot') { personalizedOR = 58; personalizedPFS = '11-13 months'; personalizedOS = '5y OS ~43%'; qualifier = 'Hot melanoma with ipi+nivo: 7.5y data available.'; }
+  if (ct === 'Hodgkin') { personalizedOR = 85; personalizedPFS = 'Not reached at 6y'; personalizedOS = '>90% at 5y'; qualifier = 'Hodgkin is the most immunotherapy-responsive solid/heme cancer.'; }
+  if (ct === 'MCC') { personalizedOR = 56; personalizedOS = '21+ months'; qualifier = 'MCPyV-associated MCC responds exceptionally to checkpoint.'; }
+  if (ct === 'CML' && stage !== 'RR') { personalizedOR = 95; personalizedPFS = 'Not reached'; personalizedOS = '>20 years'; qualifier = 'CML on TKI: near-normal life expectancy if MMR achieved.'; }
+  if (ct === 'ALL' && !prior.includes('CART')) { personalizedOR = 81; personalizedPFS = '12-18 months'; qualifier = 'CD19 CAR-T in B-ALL: CR 81% (Kymriah), NexCAR19 CR 73% in India.'; }
+
+  if (her2 === '3+') { personalizedOR = 80; personalizedPFS = '28 months'; qualifier = 'T-DXd in HER2+ breast: paradigm-shifting DESTINY-Breast03 data.'; }
+
+  // TKI-responsive cancers — dramatically better outcomes than generic base rates
+  if (ct === 'NSCLC' && muts.includes('EGFR')) { personalizedOR = 80; personalizedPFS = '18-25 months'; personalizedOS = '38+ months'; qualifier = 'EGFR+ NSCLC on osimertinib (FLAURA2): PFS 25.5 mo, OS 38.6 mo. Do NOT use ICI.'; }
+  if (ct === 'NSCLC' && muts.includes('ALK')) { personalizedOR = 83; personalizedPFS = '34.8 months'; personalizedOS = '>60 months'; qualifier = 'ALK+ NSCLC on alectinib (ALEX): PFS 34.8 mo. 5y OS ~62%. Sequential TKI strategy extends survival further.'; }
+  if (ct === 'NSCLC' && muts.includes('ROS1')) { personalizedOR = 72; personalizedPFS = '19.3 months'; personalizedOS = '>36 months'; qualifier = 'ROS1+ NSCLC: crizotinib ORR 72%, PFS 19.3 mo. Entrectinib for CNS disease.'; }
+  if (ct === 'NSCLC' && muts.includes('RET')) { personalizedOR = 64; personalizedPFS = '16.5 months'; personalizedOS = '>24 months'; qualifier = 'RET fusion NSCLC: selpercatinib ORR 64%, PFS 16.5 mo (LIBRETTO-001).'; }
+
+  // PARP-responsive cancers — transformative PFS improvements
+  if ((ct === 'Ovarian') && (muts.includes('BRCA1') || muts.includes('BRCA2'))) { personalizedOR = 72; personalizedPFS = '56 months'; personalizedOS = '>60 months'; qualifier = 'BRCA+ ovarian on olaparib maintenance (SOLO-1): PFS 56.0 vs 13.8 mo. Potential cure fraction.'; }
+  if ((ct === 'Breast') && (muts.includes('BRCA1') || muts.includes('BRCA2'))) { personalizedOR = 60; personalizedPFS = '7-12 months'; personalizedOS = '>24 months'; qualifier = 'BRCA+ breast on olaparib (OlympiAD): PFS 7.0 vs 4.2 mo. Adjuvant: DFS HR 0.58 (OlympiA).'; }
+  if ((ct === 'Pancreatic') && (muts.includes('BRCA1') || muts.includes('BRCA2'))) { personalizedOR = 45; personalizedPFS = '7.4 months'; personalizedOS = '>18 months'; qualifier = 'BRCA+ PDAC: olaparib maintenance PFS 7.4 vs 3.8 mo (POLO). First targeted therapy success in PDAC.'; }
+
+  // RCC — ICI/TKI combinations significantly outperform generic
+  if (ct === 'RCC') { personalizedOR = 56; personalizedPFS = '15-24 months'; personalizedOS = '>40 months'; qualifier = 'RCC ICI+TKI (KEYNOTE-426, CheckMate 9ER): PFS 15-24 mo depending on regimen. 5y OS 47% with nivo+ipi.'; }
+
+  // SCLC — modest ICI benefit over chemo alone
+  if (ct === 'SCLC') { personalizedOR = 60; personalizedPFS = '5.2 months'; personalizedOS = '12-13 months'; qualifier = 'ES-SCLC: IMpower133/CASPIAN atezo/durva+chemo. Modest PFS gain but OS benefit. Tarlatamab promising in 2nd-line.'; }
+
+  // HNSCC
+  if (ct === 'HNSCC' && pdl1 >= 20) { personalizedOR = 45; personalizedPFS = '8-10 months'; personalizedOS = '14-15 months'; qualifier = 'HNSCC CPS≥20: pembro+chemo (KEYNOTE-048). HPV+ better prognosis.'; }
+  else if (ct === 'HNSCC') { personalizedOR = 36; personalizedPFS = '5-6 months'; personalizedOS = '10-12 months'; qualifier = 'HNSCC: KEYNOTE-048 pembro+plat+5FU. Cetuximab-based for PD-L1 low.'; }
+
+  // Gastric
+  if (ct === 'Gastric' && (her2 === '3+' || her2 === '2+')) { personalizedOR = 51; personalizedPFS = '12-14 months'; personalizedOS = '>18 months'; qualifier = 'HER2+ gastric: T-DXd (DESTINY-Gastric01) ORR 51%. Trastuzumab+chemo 1st-line (ToGA).'; }
+  else if (ct === 'Gastric') { personalizedOR = 45; personalizedPFS = '7-8 months'; personalizedOS = '14 months'; qualifier = 'Gastric nivo+chemo (CheckMate 649): CPS≥5 OS 14.4 mo. EBV+ tumors respond exceptionally.'; }
+
+  if (channelScore >= 5) { personalizedOR = Math.min(personalizedOR + 15, 75); qualifier += ' ≥5 active channels = optimal escape prevention profile.'; }
+  else if (channelScore >= 3) { personalizedOR = Math.min(personalizedOR + 8, 65); qualifier += ' ≥3 channels = recommended multi-modal strategy.'; }
+  else if (channelScore === 0) { personalizedOR = Math.max(personalizedOR - 15, 10); qualifier += ' No active channels identified — focus on Layer 0 + Layer 3 TME conversion.'; }
+
+  // Cold TME penalty — SKIP for heme malignancies (TME logic doesn't apply to blood cancers)
+  const isHeme = ['AML','ALL','CLL','CML','Myeloma','DLBCL','Hodgkin'].includes(ct);
+  if ((tme === 'Cold' || tme === 'Desert') && !isHeme) { personalizedOR = Math.max(personalizedOR - 15, 8); qualifier += ' Cold TME: checkpoint alone ORR ~5-10%; Layer 3 required.'; }
+
+  // CLL-specific outcomes (override generic)
+  if (ct === 'CLL') { personalizedOR = 85; personalizedPFS = '5y PFS 62%'; personalizedOS = '>10 years'; qualifier = 'CLL venetoclax+obinutuzumab: 5y PFS 62% even in del17p. BTKi: continuous until progression. Near-normal life expectancy for many.'; }
+  if (ct === 'AML' && muts.includes('FLT3')) { personalizedOR = 65; personalizedPFS = '8-12 months'; personalizedOS = '74.7 months (RATIFY)'; qualifier = 'FLT3+ AML on midostaurin+7+3: OS 74.7 mo. Gilteritinib for R/R.'; }
+  if (ct === 'DLBCL' && stage !== 'RR') { personalizedOR = 77; personalizedPFS = '2y PFS 76.7%'; personalizedOS = '>60% at 5y'; qualifier = 'DLBCL Pola-R-CHP (POLARIX): 2y PFS 76.7%. Most patients cured with frontline.'; }
+  if (ct === 'DLBCL' && stage === 'RR') { personalizedOR = 65; personalizedPFS = '12-18 months'; personalizedOS = '~50% at 2y'; qualifier = 'R/R DLBCL: CAR-T (axi-cel ZUMA-7) CR 65%. Bispecifics (epcoritamab) if CAR-T not feasible.'; }
+
+  // Post-progression adjustments — don't show first-line numbers for patients who already failed
+  if (prior.includes('Targeted')) {
+    if (ct === 'NSCLC' && muts.includes('EGFR')) { personalizedOR = 30; personalizedPFS = '5-6 months'; personalizedOS = '15-20 months'; qualifier = 'Post-osimertinib EGFR+ NSCLC: amivantamab+lazertinib PFS 6.3 mo or platinum+pemetrexed. Rebiopsy for resistance mechanism.'; }
+    if (ct === 'Ovarian' && (muts.includes('BRCA1') || muts.includes('BRCA2'))) { personalizedOR = 30; personalizedPFS = '4-6 months'; personalizedOS = '12-18 months'; qualifier = 'Post-PARP ovarian: platinum re-challenge, mirvetuximab (FRα+), or clinical trials. Check for BRCA reversion.'; }
+  }
+
+  return { baseOR, personalizedOR, personalizedPFS, personalizedOS, qualifier, channelScore };
+}
+
+function buildDataGaps(ct, stage, muts, msi, tmb, pdl1, her2, viral, tme, prior, ecog) {
+  const gaps = [];
+  const hasMuts = muts.length > 0;
+
+  // TME unknown — most impactful missing data
+  if (tme === 'Unknown') {
+    gaps.push({
+      title: 'Tumor Microenvironment (TME) Status',
+      impact: 'HIGH',
+      why: 'TME status (Hot/Warm/Cold/Desert) determines whether immunotherapy alone can work or needs TME conversion strategies first. Without this, Layer 3 strategies are generic.',
+      how: 'Ask your oncologist about: TIL (tumor-infiltrating lymphocyte) assessment on biopsy, CD8+ T-cell quantification by IHC, or comprehensive immune profiling panels (NanoString IO360, Caris MI Profile).',
+      cost: 'IHC panel: $200-500; comprehensive profiling: $1,500-4,000'
+    });
+  }
+
+  // MSI unknown
+  if (msi === 'Unknown') {
+    gaps.push({
+      title: 'MSI / Mismatch Repair (MMR) Status',
+      impact: 'HIGH',
+      why: 'MSI-H tumors respond exceptionally well to immunotherapy (ORR 36-44% across all cancer types). This is an FDA-approved tumor-agnostic biomarker — if your tumor is MSI-H, pembrolizumab is approved regardless of cancer type.',
+      how: 'IHC for MMR proteins (MLH1, MSH2, MSH6, PMS2) — available at any pathology lab. Or PCR-based MSI testing on tumor tissue.',
+      cost: 'MMR IHC: $100-300; PCR MSI: $200-500. Usually covered by insurance.'
+    });
+  }
+
+  // No mutations tested
+  if (!hasMuts) {
+    const relevantTests = [];
+    if (['NSCLC','CRC','Melanoma'].includes(ct)) relevantTests.push('Next-generation sequencing (NGS) panel — FoundationOne CDx, Tempus xT, or Guardant360');
+    else if (['Breast','Ovarian','Pancreatic','Prostate'].includes(ct)) relevantTests.push('BRCA1/2 germline + somatic testing (FoundationOne, Myriad myChoice)');
+    else if (['AML','CLL','ALL'].includes(ct)) relevantTests.push('Targeted heme panel (FLT3, IDH1/2, TP53, BCR-ABL)');
+    else relevantTests.push('Comprehensive genomic profiling (FoundationOne CDx or equivalent)');
+
+    gaps.push({
+      title: 'Genomic / Mutation Profiling',
+      impact: 'HIGH',
+      why: `Many ${ct} cases have actionable mutations with FDA-approved targeted therapies. Without testing, potentially life-extending treatments could be missed.` +
+           (ct === 'NSCLC' ? ' In NSCLC, ~60% of patients have a targetable driver mutation (EGFR, ALK, ROS1, RET, KRAS G12C, MET ex14, NTRK).' : '') +
+           (ct === 'Breast' || ct === 'Ovarian' ? ' BRCA mutations unlock PARP inhibitors with dramatic PFS improvements.' : '') +
+           (ct === 'CRC' ? ' KRAS/BRAF status determines whether anti-EGFR therapy works.' : ''),
+      how: relevantTests.join('; '),
+      cost: 'NGS panel: $300-5,000 (often covered by insurance for advanced cancers). Liquid biopsy: $500-2,500.'
+    });
+  }
+
+  // PD-L1 unknown for cancers where it matters
+  if (pdl1 === 0 && ['NSCLC','Bladder','HNSCC','Cervical','Gastric','SCLC'].includes(ct)) {
+    gaps.push({
+      title: 'PD-L1 Expression Level',
+      impact: 'MEDIUM',
+      why: `PD-L1 score helps determine whether immunotherapy monotherapy is sufficient or needs to be combined with chemotherapy. In ${ct}, PD-L1 ≥50% can mean chemo-free options.`,
+      how: 'PD-L1 IHC (22C3 or SP263 clone) on tumor biopsy tissue. Standard test available at all pathology labs.',
+      cost: 'PD-L1 IHC: $100-400. Routinely ordered for these cancer types.'
+    });
+  }
+
+  // HER2 not tested for cancers where it matters
+  if (her2 === '0' && ['Breast','Gastric'].includes(ct)) {
+    gaps.push({
+      title: 'HER2 Status (IHC + FISH if equivocal)',
+      impact: 'HIGH',
+      why: ct === 'Breast' ? 'HER2+ breast cancer has dramatically different treatment (trastuzumab, T-DXd). Even HER2-low (1+/2+) now has T-DXd approval (DESTINY-Breast04). This changes everything.' :
+           'HER2+ gastric cancer has trastuzumab (ToGA) and T-DXd (DESTINY-Gastric) options that significantly improve survival.',
+      how: 'HER2 IHC on biopsy. If 2+ (equivocal), reflex to FISH for HER2 amplification.',
+      cost: 'HER2 IHC: $100-300; FISH: $300-600. Standard of care testing — should already be done.'
+    });
+  }
+
+  // TMB not known
+  if (tmb <= 0 && !['AML','ALL','CLL','CML','Myeloma'].includes(ct)) {
+    gaps.push({
+      title: 'Tumor Mutational Burden (TMB)',
+      impact: 'MEDIUM',
+      why: 'TMB ≥10 mut/Mb is an FDA-approved tumor-agnostic biomarker for pembrolizumab. High TMB (≥20) strongly predicts immunotherapy response across cancer types.',
+      how: 'Calculated from NGS panel (FoundationOne CDx reports TMB automatically). Or whole-exome sequencing.',
+      cost: 'Included in most comprehensive NGS panels at no extra cost.'
+    });
+  }
+
+  // Viral status for relevant cancers
+  if (viral === 'None' && ['HCC','Cervical','HNSCC','NPC','Gastric'].includes(ct)) {
+    const viralInfo = ct === 'HCC' ? 'HBV/HCV — mandatory for treatment planning (HBV requires antiviral prophylaxis)' :
+                      ct === 'Cervical' || ct === 'HNSCC' ? 'HPV status — affects prognosis and treatment intensity' :
+                      ct === 'NPC' ? 'EBV status — affects prognosis and monitoring' :
+                      'EBV status — EBV+ gastric responds exceptionally to immunotherapy';
+    gaps.push({
+      title: 'Viral Association Status',
+      impact: ct === 'HCC' ? 'HIGH' : 'MEDIUM',
+      why: viralInfo,
+      how: ct === 'HCC' ? 'HBsAg, anti-HCV serology. Mandatory before treatment.' : 'Ask oncologist — usually tested at diagnosis.',
+      cost: 'Viral serology: $50-200.'
+    });
+  }
+
+  // Stage missing
+  if (!stage) {
+    gaps.push({
+      title: 'Cancer Stage',
+      impact: 'HIGH',
+      why: 'Stage determines treatment intent (curative vs. palliative) and which protocols apply.',
+      how: 'CT/PET scan, biopsy, surgical staging as appropriate.',
+      cost: 'Varies by cancer type and imaging modality.'
+    });
+  }
+
+  return gaps;
+}
+
+function renderOutput(ct, stage, tme, channelScore, channels, activeChannels, layer0, layer2, layer3, layer4, alerts, sr, isIndia, budget, dataGaps) {
+  let gateMsg = channelScore >= 5 ? `✅ OPTIMAL — ${channelScore}/9 channels active (escape prevention achieved)` :
+                channelScore >= 3 ? `✅ RECOMMENDED — ${channelScore}/9 channels active (multi-modal viable)` :
+                channelScore >= 1 ? `⚠️ VIABLE — ${channelScore}/9 channels active (single-channel; escape risk)` :
+                `❌ NO CHANNELS — Consider TME conversion first, reassess after`;
+  let gateColor = channelScore >= 5 ? 'green' : channelScore >= 3 ? 'yellow' : channelScore >= 1 ? 'yellow' : 'red';
+
+  const html = `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div>
+      <h2 style="font-size:18px;font-weight:800">${ct} · Stage ${stage} · ${tme} TME</h2>
+      <div style="color:var(--muted);font-size:12px">Personalized 5-Layer Treatment Pipeline</div>
+    </div>
+    <button class="copy-btn" onclick="window.print()">🖨 Print</button>
+  </div>
+
+  ${isIndia ? `<div style="background:rgba(255,153,51,0.1);border:1px solid rgba(255,153,51,0.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#ff9933">🇮🇳 India Mode — showing NexCAR19, generic drug costs, and access centers (Tata Memorial, AIIMS, CMC Vellore)</div>` : ''}
+  ${budget === 'Low' ? `<div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--yellow)">⚠️ Low budget: some recommendations may not be accessible. Focus on government schemes, generics, and clinical trials.</div>` : ''}
+
+  ${alerts.length > 0 ? `<div class="layer-card" style="border-color:#ef4444">
+    <div class="layer-header"><span class="layer-badge" style="background:#ef4444">ALERTS</span><span class="layer-title">Critical Warnings & Rules</span></div>
+    ${alerts.map(a=>`<div class="alert-box"><h4>${a.title}</h4><p>${a.msg}</p></div>`).join('')}
+  </div>` : ''}
+
+  <div class="layer-card">
+    <div class="layer-header"><span class="layer-badge">LAYER 1</span><span class="layer-title">Antigen Channel Analysis (OR-Gate)</span></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">${gateMsg}</div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(channelScore/9*100)}%"></div></div>
+    <div class="channel-bar">
+      ${channels.map(c=>`<div class="channel-chip ${c.active?'active':'inactive'}" title="${c.detail}">${c.active?'✓':''} ${c.name}</div>`).join('')}
+    </div>
+    ${channels.filter(c=>c.active).map(c=>`<div class="item ${c.active?'green':''}"><div class="item-title">${c.name} Channel Active</div><div class="item-detail">${c.detail}</div></div>`).join('')}
+  </div>
+
+  <div class="layer-card">
+    <div class="layer-header"><span class="layer-badge">LAYER 0</span><span class="layer-title">Standard of Care</span></div>
+    ${layer0.map(r=>`<div class="item ${r.c}"><div class="item-title">${r.t}</div><div class="item-detail">${r.d}</div></div>`).join('')}
+  </div>
+
+  <div class="layer-card">
+    <div class="layer-header"><span class="layer-badge">LAYER 2</span><span class="layer-title">Immune Weapons</span></div>
+    ${layer2.map(r=>`<div class="item ${r.c}"><div class="item-title">${r.t} <span class="tag ${r.c==='green'?'g':r.c==='red'?'r':'y'}">${r.tier||''}</span></div><div class="item-detail">${r.d}</div></div>`).join('')}
+  </div>
+
+  <div class="layer-card">
+    <div class="layer-header"><span class="layer-badge">LAYER 3</span><span class="layer-title">TME Disruption Strategy (${tme} TME)</span></div>
+    ${layer3.map(r=>`<div class="item ${r.c}"><div class="item-title">${r.t}</div><div class="item-detail">${r.d}</div></div>`).join('')}
+  </div>
+
+  <div class="layer-card">
+    <div class="layer-header"><span class="layer-badge">LAYER 4</span><span class="layer-title">Monitoring Protocol</span></div>
+    ${layer4.map(r=>`<div class="item ${r.c}"><div class="item-title">${r.t}</div><div class="item-detail">${r.d}</div></div>`).join('')}
+  </div>
+
+  <div class="layer-card">
+    <div class="layer-header"><span class="layer-badge" style="background:var(--purple)">OUTCOMES</span><span class="layer-title">Estimated Success Rates</span></div>
+    <div class="score-grid">
+      <div class="score-box"><div class="score-val">${sr.personalizedOR}%</div><div class="score-label">Est. ORR (personalized)</div></div>
+      <div class="score-box"><div class="score-val">${sr.personalizedPFS}</div><div class="score-label">Estimated PFS</div></div>
+      <div class="score-box"><div class="score-val" style="font-size:16px">${sr.personalizedOS}</div><div class="score-label">Estimated OS</div></div>
+    </div>
+    <div style="margin-top:10px;padding:10px;background:var(--panel);border-radius:6px;font-size:12px;color:var(--muted)">
+      <strong style="color:var(--text)">Biomarker rationale:</strong> ${sr.qualifier || 'No specific biomarker modifiers; estimates based on cancer type + stage + TME.'}
+      <br><br>
+      <strong style="color:var(--yellow)">⚠️ Disclaimer:</strong> These estimates are derived from published clinical trial data for populations matching this biomarker profile. Individual outcomes vary. All treatment decisions must be made by a qualified oncologist with full clinical assessment.
+    </div>
+  </div>
+
+  ${dataGaps && dataGaps.length > 0 ? `
+  <div class="layer-card" style="border-color:var(--blue)">
+    <div class="layer-header"><span class="layer-badge" style="background:var(--blue)">📋 IMPROVE YOUR RESULTS</span><span class="layer-title">Missing Information — Tests That Could Unlock Better Options</span></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;padding:8px 12px;background:var(--panel);border-radius:6px">
+      We've given you the best recommendations we can with the information provided. The tests below could significantly improve your treatment pipeline — <strong style="color:var(--text)">discuss with your oncologist</strong> which ones make sense for your case.
+    </div>
+    ${dataGaps.map(g => `
+      <div class="item ${g.impact === 'HIGH' ? 'yellow' : 'blue'}" style="margin-bottom:10px">
+        <div class="item-title">${g.impact === 'HIGH' ? '⚡' : 'ℹ️'} ${g.title} <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${g.impact === 'HIGH' ? 'rgba(245,158,11,0.2);color:var(--yellow)' : 'rgba(96,165,250,0.2);color:var(--blue)'}">${g.impact} IMPACT</span></div>
+        <div class="item-detail" style="margin-top:4px"><strong>Why it matters:</strong> ${g.why}</div>
+        <div class="item-detail" style="margin-top:4px"><strong>How to get it:</strong> ${g.how}</div>
+        <div class="item-detail" style="margin-top:4px;color:var(--muted)"><strong>Approximate cost:</strong> ${g.cost}</div>
+      </div>
+    `).join('')}
+  </div>
+  ` : `
+  <div class="layer-card" style="border-color:var(--green)">
+    <div class="layer-header"><span class="layer-badge" style="background:var(--green)">✅ DATA COMPLETE</span><span class="layer-title">Comprehensive Profile</span></div>
+    <div style="font-size:12px;color:var(--green);padding:8px 12px">All key biomarkers provided. This pipeline is based on your full profile — the recommendations above are as specific as possible.</div>
+  </div>
+  `}
+  `;
+  document.getElementById('outputPanel').innerHTML = html;
+}
+</script>
+</body>
+</html>
